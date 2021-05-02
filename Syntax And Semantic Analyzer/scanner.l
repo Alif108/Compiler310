@@ -50,7 +50,7 @@ SYMBOL	[\.@#$%^*()_+{}|:><?,;=-\\\/]
 "for"		{	return FOR;	}
 "while"		{	return WHILE;	}
 "return"	{	return RETURN;	}
-"println"	{	return PRINTLN;	}		
+"printf"	{	return PRINTLN;	}		
 			
 "+"		|
 "-"		{	

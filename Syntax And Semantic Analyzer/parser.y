@@ -418,9 +418,9 @@ statement : var_declaration	{
 		
 	  | IF LPAREN expression RPAREN statement ELSE statement	{
 	  
-	  		$$ = new SymbolInfo(("if(" + $3->getName() + ")" + $5->getName() + "else" + $7->getName()), "NON_TERMINAL");
+	  		$$ = new SymbolInfo(("if(" + $3->getName() + ")" + $5->getName() + "\nelse\n" + $7->getName()), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": statement : IF LPAREN expression RPAREN statement ELSE statement"<<endl<<endl;	
-			cout<<"if("<<$3->getName()<<")"<<$5->getName()<<"else"<<$7->getName()<<endl<<endl;
+			cout<<"if("<<$3->getName()<<")"<<$5->getName()<<"\nelse\n"<<$7->getName()<<endl<<endl;
 		}
 		
 	  | WHILE LPAREN expression RPAREN statement	{
@@ -432,9 +432,9 @@ statement : var_declaration	{
 		
 	  | PRINTLN LPAREN id RPAREN SEMICOLON		{
 	  
-	  		$$ = new SymbolInfo(("(" + $3->getName() + ");" + "\n"), "NON_TERMINAL");
+	  		$$ = new SymbolInfo(("printf(" + $3->getName() + ");" + "\n"), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl<<endl;	
-			cout<<"("<<$3->getName()<<");"<<"\n"<<endl<<endl;
+			cout<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
 		}
 		
 	  | RETURN expression SEMICOLON		{
@@ -491,7 +491,7 @@ variable : id 	{
 	 		$$ = new SymbolInfo(($1->getName() + "[" + $3->getName() + "]"), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": variable : ID LTHIRD expression RTHIRD"<<endl<<endl;
 			
-			if($3->getName() != "CONST_INT")
+			if($3->getTypeSpecifier() != "int")
 			{
 				cout<<"Error at line no "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
 				error_count++;
@@ -518,6 +518,7 @@ expression : logic_expression		{
 			cout<<"At line no "<<line_count<<": expression : logic_expression "<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
 		}
+		
 	   | variable ASSIGNOP logic_expression		{
 			
 			$$ = new SymbolInfo(($1->getName() + "=" + $3->getName()), "NON_TERMINAL");
@@ -525,12 +526,19 @@ expression : logic_expression		{
 			
 			if($1->getTypeSpecifier() != $3->getTypeSpecifier())
 			{
-				cout<<"Error at line no "<<line_count<<": Type Mismatch"<<endl<<endl;
-				cout<<$1->getTypeSpecifier()<<endl;
-				cout<<$3->getTypeSpecifier()<<endl;
-				error_count++;
-				
-				$$->setTypeSpecifier("default");					// default when error
+				if(($1->getTypeSpecifier() == "int" && $3->getTypeSpecifier() == "float") || ($1->getTypeSpecifier() == "float" && $3->getTypeSpecifier() == "int"))			
+				{
+					$$->setTypeSpecifier("float");					// if one is float and the other is int, result is float
+				}
+				else
+				{
+					cout<<"Error at line no "<<line_count<<": Type Mismatch"<<endl<<endl;
+					cout<<$1->getTypeSpecifier()<<endl;
+					cout<<$3->getTypeSpecifier()<<endl;
+					error_count++;
+					
+					$$->setTypeSpecifier("default");				// default when error
+				}
 			}
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());	
@@ -544,6 +552,7 @@ logic_expression : rel_expression 	{								// TODO: handle void type specifier
 			cout<<"At line no "<<line_count<<": logic_expression : rel_expression "<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
 		}
+		
 		| rel_expression LOGICOP rel_expression		{					// TODO: handle void type specifier
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
@@ -595,7 +604,8 @@ term :	unary_expression	{
 			cout<<$1->getName()<<endl<<endl;
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());
-}
+	}
+	
 	|  term MULOP unary_expression		{							// TODO: handle void type specifier
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
