@@ -7,7 +7,11 @@
 
 using namespace std;
 
-
+struct param
+{
+	string param_type;
+	string param_name;
+}; 
 
 class SymbolInfo
 {
@@ -17,6 +21,7 @@ class SymbolInfo
 	
 	string type_specifier;			// for function
 	int size;
+	vector<param>param_list;							//container for function parameter
 
 public:
 
@@ -47,6 +52,13 @@ public:
         return this->next;
     }
     
+    ~SymbolInfo()
+    {
+        param_list.clear();
+    }
+    
+    // -----additional functions --------//
+    
     void setTypeSpecifier(string ts)
     {
     	this->type_specifier = ts;
@@ -66,11 +78,22 @@ public:
     {
     	return size;
     }
+    
+    void addParameter(string type, string name)
+    {
+    	param_list.push_back({type, name});
+    }
+    
+    int getParamListSize()
+    {
+    	return param_list.size();
+    }
+    
+    param getParameter(int i)
+    {
+    	return param_list[i];
+    }
 
-//    ~SymbolInfo()
-//    {
-//        delete next;
-//    }
 };
 
 
@@ -432,12 +455,12 @@ public:
 	    return current->Delete(name);
 	}
 	
-	SymbolInfo* LookupHere(string name)
+	SymbolInfo* LookupHere(string name)					// Looks up in the current ScopeTable only
 	{
 		return current->LookupSymbol(name);
 	}
 
-	SymbolInfo* Lookup(string name)
+	SymbolInfo* Lookup(string name)						// Looks up in all scopeTables
 	{
 	    ScopeTable* temp = current;
 

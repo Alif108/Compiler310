@@ -158,20 +158,88 @@ update_func_info	: 	{
 					return_type = type;					
 				};
 
-insert_func_def_info 	: 	{ 							//TODO: check if previously declared or not 
-					SymbolInfo* si  = new SymbolInfo(func_name ,"ID");
-					si->setTypeSpecifier(return_type);
-					si->setSize(-2);				// -2 for function defined
-		
-					st.Insert(*si);
+insert_func_def_info 	: 	{ 										//TODO: handle void 
+					SymbolInfo* temp = st.Lookup(func_name);					// searching in all the scopes
+					
+					if(temp == NULL)							// no id with the same name found
+					{
+						SymbolInfo* si  = new SymbolInfo(func_name, "ID");
+						si->setTypeSpecifier(return_type);
+						si->setSize(-2);						// -2 for function definition
+						
+						for(int i=0; i<param_list.size(); i++)				// adding parameters
+						{
+							si->addParameter(param_list[i].param_type, param_list[i].param_name);
+						}						
+			
+						st.Insert(*si);
+					}
+					
+					else if(temp->getSize() == -3)						// function declared before
+					{
+						if(return_type != temp->getTypeSpecifier())			// return types don't match
+						{
+							cout<<"Error at line no "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
+							error_count++;
+						}
+						
+						else if(param_list.size() != temp->getParamListSize())		// parameter list sizes don't match
+						{
+							cout<<"Error at line no "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
+							error_count++;
+						}
+						
+						else								// return type and sizes match
+						{
+							int i = 0;
+							
+							for(i=0; i<param_list.size(); i++)			// checking whether all the param type matches
+							{
+								if(param_list[i].param_type != temp->getParameter(i).param_type)	// if one doesn't match
+								{
+									cout<<"Error at line no "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
+									error_count++;
+									break;
+								}
+							}
+							
+							if(i == param_list.size())				// all the param types matched
+							{
+								temp->setSize(-2);				// function is defined now
+							}
+						}
+					}
+					
+					else									// id with same name found
+					{
+						cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
+						error_count++;
+					}
 				};
 				
 insert_func_dec_info 	: 	{ 	
-					SymbolInfo* si  = new SymbolInfo(func_name ,"ID");
-					si->setTypeSpecifier(return_type);
-					si->setSize(-3);				// -3 for function declared
-		
-					st.Insert(*si);
+					SymbolInfo* temp = st.Lookup(func_name);					// searching for the func_name
+					
+					if(temp == NULL)							// no id is declared before with the same name
+					{
+						SymbolInfo* si  = new SymbolInfo(func_name, "ID");
+						si->setTypeSpecifier(return_type);
+						si->setSize(-3);						// -3 for function declared
+						
+						for(int i=0; i<param_list.size(); i++)				// adding parameters
+						{
+							si->addParameter(param_list[i].param_type, param_list[i].param_name);
+						}
+							
+						st.Insert(*si);							// inserting function info
+						
+						param_list.clear();						// emtying the container
+					}
+					else									// some other id with the same name is found
+					{
+						cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
+						error_count++;
+					}
 				};
 
 
@@ -300,12 +368,12 @@ declaration_list : declaration_list COMMA id	{
 				error_count++;
 			}
 			
+			else			
+				variable_list.push_back({"int", $3->getName(), -1});			// default var_type "int", var_size -1
+			
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName()), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": declaration_list : declaration_list COMMA ID"<<endl<<endl;
 			cout<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
-			
-			if(temp == NULL)			
-				variable_list.push_back({"int", $3->getName(), -1});			// default var_type "int", var_size -1
 		}
 		
  		  | declaration_list COMMA id LTHIRD CONST_INT RTHIRD	{				// array
@@ -328,20 +396,20 @@ declaration_list : declaration_list COMMA id	{
  		}
  		
  		  | id	{										// single identifier... 		e.g. (int) a
+ 		  
+			SymbolInfo* temp = st.LookupHere($1->getName());				// searching it in the current ScopeTable
 			
-			SymbolInfo* temp = st.LookupHere($1->getName());
-			
-			if(temp!=NULL)									// found in the SymbolTable
+			if(temp != NULL)								// found in the SymbolTable
 			{
 				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
 			
+			else
+				variable_list.push_back({"int", $1->getName(), -1});			// default var_type "int", var_size -1
+				
 			cout<<"At line no "<<line_count<<": declaration_list : ID"<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
-			
-			if(temp == NULL)
-				variable_list.push_back({"int", $1->getName(), -1});			// default var_type "int", var_size -1
 		}
 		
  		  | id LTHIRD CONST_INT RTHIRD	{							// array  		e.g. (int) a[7]
@@ -353,13 +421,12 @@ declaration_list : declaration_list COMMA id	{
 				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
+			else
+ 		  		variable_list.push_back({"int", $1->getName(), stoi($3->getName())});	// default var_type "int", array size taken from $3
  		  	
  		  	$$ = new SymbolInfo(($1->getName() + "[" + $3->getName() + "]"), "NON_TERMINAL");
  		  	cout<<"At line no "<<line_count<<": declaration_list : ID LTHIRD CONST_INT RTHIRD"<<endl<<endl;
  		  	cout<<$1->getName()<<"[" + $3->getName()<<"]"<<endl<<endl;
- 		  	
- 		  	if(temp == NULL)
- 		  		variable_list.push_back({"int", $1->getName(), stoi($3->getName())});	// default var_type "int", array size taken from $5
  		}
  		  ;
  		  
@@ -433,7 +500,16 @@ statement : var_declaration	{
 	  | PRINTLN LPAREN id RPAREN SEMICOLON		{
 	  
 	  		$$ = new SymbolInfo(("printf(" + $3->getName() + ");" + "\n"), "NON_TERMINAL");
-			cout<<"At line no "<<line_count<<": statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl<<endl;	
+			cout<<"At line no "<<line_count<<": statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl<<endl;
+			
+			SymbolInfo * temp = st.LookupHere($3->getName());
+			
+			if(temp == NULL)
+			{
+				cout<<"Error at line no "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
+				error_count++;
+			}
+				
 			cout<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
 		}
 		
@@ -459,19 +535,20 @@ expression_statement 	: SEMICOLON	{
 			;
 	  
 variable : id 	{
-			
-			SymbolInfo* temp = st.Lookup($1->getName());				// searching it in the SymbolTable		
 			cout<<"At line no "<<line_count<<": variable : ID"<<endl<<endl;
+			cout<<$1->getName()<<endl<<endl;
 			
-			if(temp == NULL)							// if not declared previously
+			SymbolInfo* temp = st.Lookup($1->getName());					// searching it in the SymbolTable		
+			
+			if(temp == NULL)								// if not declared previously
 			{
 				cout<<"Error at line no "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
-				$$->setTypeSpecifier("default");				// type specifier = default -> when error
+				$$->setTypeSpecifier("default");					// type specifier = default -> when error
 			}
 			
-			else if(temp->getSize() > 0)						//  {id} is an array
+			else if(temp->getSize() > 0)							//  {id} is an array
 			{
 				//cout<<temp->getSize()<<endl;
 				cout<<"Error at line no "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
@@ -481,34 +558,48 @@ variable : id 	{
 			}
 			
 			else					
-				$$->setTypeSpecifier(temp->getTypeSpecifier());			// setting the type specifier
-				
-			cout<<$1->getName()<<endl<<endl;
+				$$->setTypeSpecifier(temp->getTypeSpecifier());				// setting the type specifier
 		}	
 		
-	 | id LTHIRD expression RTHIRD {							// array index
+	 | id LTHIRD expression RTHIRD {								// array index
 	 		
 	 		$$ = new SymbolInfo(($1->getName() + "[" + $3->getName() + "]"), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": variable : ID LTHIRD expression RTHIRD"<<endl<<endl;
 			
-			if($3->getTypeSpecifier() != "int")
-			{
-				cout<<"Error at line no "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
-				error_count++;
-			}
+			SymbolInfo* temp = st.Lookup($1->getName());					// searching in all the ScopeTables
 			
-			SymbolInfo* temp = st.Lookup($1->getName());
-			if(temp == NULL)							// if not declared previously
+			if(temp == NULL)								// if not declared previously
 			{
 				cout<<"Error at line no "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
 				error_count++;
 				
-				$$->setTypeSpecifier("default");				// type specifier = default -> when error
+				$$->setTypeSpecifier("default");					// type specifier = default -> when error
 			}
-			else					
-				$$->setTypeSpecifier(temp->getTypeSpecifier());			// setting the type specifier
+
+			else										// declared previously
+			{
+				if(temp->getSize() < 0)							// not an array
+				{
+					cout<<"Error at line no "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
+					error_count++;
+					
+					$$->setTypeSpecifier("default");					// type specifier = default -> when error
+				}
 			
-				
+				else if($3->getTypeSpecifier() != "int")				// index is not an integer
+				{
+					cout<<"Error at line no "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
+					error_count++;
+					
+					$$->setTypeSpecifier("default");					// type specifier = default -> when error
+				}
+				else
+				{
+					$$->setTypeSpecifier(temp->getTypeSpecifier());			// setting the type specifier
+				}
+			
+			}
+			
 			cout<<$1->getName()<<"["<<$3->getName()<<"]"<<endl<<endl;
 		}
 	 ;
@@ -591,7 +682,7 @@ simple_expression : term 	{
 		  	cout<<"At line no "<<line_count<<": simple_expression : simple_expression ADDOP term  "<<endl<<endl;	
 			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
-			if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")
+			if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")	// if any of the operands are float, result is float
 				$$->setTypeSpecifier("float");
 			else
 				$$->setTypeSpecifier($1->getTypeSpecifier());			
@@ -606,12 +697,12 @@ term :	unary_expression	{
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 	}
 	
-	|  term MULOP unary_expression		{							// TODO: handle void type specifier
+	|  term MULOP unary_expression		{									// TODO: handle void type specifier
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": term : term MULOP unary_expression"<<endl<<endl;	
 			
-			if($2->getName() == "%")							// modulus operator
+			if($2->getName() == "%")									// modulus operator
 			{
 				if($1->getTypeSpecifier() != "int" || $3->getTypeSpecifier() != "int")			// if any of the operands are not "int"
 				{
@@ -668,24 +759,28 @@ factor	: variable 	{										// TODO: handle void type specifier
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 			}
 			
-	| id LPAREN argument_list RPAREN	{							//TODO: add more error handlings here
+	| id LPAREN argument_list RPAREN	{							//function call
+													//TODO: add more error handlings here
 			
 			$$ = new SymbolInfo(($1->getName() + "(" + $3->getName() + ")"), "NON_TERMINAL");
 			cout<<"At line no "<<line_count<<": factor : ID LPAREN argument_list RPAREN"<<endl<<endl;	
-			cout<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
 			
 			SymbolInfo* temp = st.Lookup($1->getName());
 			
-			if(temp == NULL)
+			if(temp == NULL)								// no function defined before
 			{
-				cout<<"Error at line no "<<line_count<<": No identifier named "<<$1->getName()<<" found"<<endl<<endl;
+//				cout<<"Error at line no "<<line_count<<": No identifier named "<<$1->getName()<<" found"<<endl<<endl;
+				cout<<"Error at line no "<<line_count<<": Undeclared function "<<$1->getName()<<" defined"<<endl<<endl;
 				error_count++;
 				
 				$$->setTypeSpecifier("default");					// default -> when error
 			}
 			else
 				$$->setTypeSpecifier(temp->getTypeSpecifier());	
-			}										
+				
+			cout<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
+			}
+												
 			
 	| LPAREN expression RPAREN	{								//TODO: add more error handlings here
 			
