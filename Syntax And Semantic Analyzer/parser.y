@@ -33,7 +33,8 @@ struct parameter
 }; 
 
 vector<var>variable_list;							// container for variable
-vector<parameter>param_list;							//container for function parameter
+vector<parameter>param_list;							// container for function parameter
+vector<string>arg_list;								// container for arguments
 
 bool searchParamList(string name)						// searching for redundancy in parameter list
 {
@@ -180,15 +181,15 @@ insert_func_def_info 	: 	{ 										//TODO: handle void
 					{
 						if(return_type != temp->getTypeSpecifier())			// return types don't match
 						{
-							cout<<"Error at line no "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
-							errorFile<<"Error at line no "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
+							cout<<"Error at line "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
+							errorFile<<"Error at line "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
 							error_count++;
 						}
 						
 						else if(param_list.size() != temp->getParamListSize())		// parameter list sizes don't match
 						{
-							cout<<"Error at line no "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
-							errorFile<<"Error at line no "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
+							cout<<"Error at line "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
+							errorFile<<"Error at line "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
 							error_count++;
 						}
 						
@@ -200,8 +201,8 @@ insert_func_def_info 	: 	{ 										//TODO: handle void
 							{
 								if(param_list[i].param_type != temp->getParameter(i).param_type)	// if one doesn't match
 								{
-									cout<<"Error at line no "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
-									errorFile<<"Error at line no "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
+									cout<<"Error at line "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
+									errorFile<<"Error at line "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
 									error_count++;
 									break;
 								}
@@ -216,8 +217,8 @@ insert_func_def_info 	: 	{ 										//TODO: handle void
 					
 					else									// id with same name found
 					{
-						cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
-						errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
+						cout<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
+						errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						error_count++;
 					}
 				};
@@ -242,8 +243,8 @@ insert_func_dec_info 	: 	{
 					}
 					else									// some other id with the same name is found
 					{
-						cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
-						errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<func_name<<" found"<<endl<<endl;
+						cout<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
+						errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						error_count++;
 					}
 				};
@@ -257,8 +258,8 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  			
  			if(searchParamList($4->getName()))					// checking multiple declaration of parameters
  			{
- 				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in a parameter"<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in a parameter"<<endl<<endl;
+ 				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in parameter"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in parameter"<<endl<<endl;
 				error_count++;
  			}
  			else
@@ -334,14 +335,22 @@ var_declaration : type_specifier declaration_list SEMICOLON	{
 				cout<<"Line "<<line_count<<": var_declaration : type_specifier declaration_list SEMICOLON"<<endl<<endl;
 				cout<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
 				
-				for(int i=0; i<variable_list.size(); i++)
+				if($1->getName() == "void")								// e.g.		void x, y, z;
 				{
-					SymbolInfo* si = new SymbolInfo(variable_list[i].var_name, "ID");
-					si->setTypeSpecifier($1->getName());					// setting the variable type
-					si->setSize(variable_list[i].var_size);
-//					variable_list[i].var_type.assign($1->getName());			// updating the var_type
-					st.Insert(*si);								// inserting variable in SymbolTable
-
+					cout<<"Error at line "<<line_count<<": Variable type cannot be void"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Variable type cannot be void"<<endl<<endl;
+					error_count++;
+				}
+				else
+				{
+					for(int i=0; i<variable_list.size(); i++)
+					{
+						SymbolInfo* si = new SymbolInfo(variable_list[i].var_name, "ID");
+						si->setTypeSpecifier($1->getName());					// setting the variable type
+						si->setSize(variable_list[i].var_size);
+	//					variable_list[i].var_type.assign($1->getName());			// updating the var_type
+						st.Insert(*si);								// inserting variable in SymbolTable
+					}
 				}
 				
 //				st.printAllScopeTable(logFile);
@@ -377,8 +386,8 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp!=NULL)									// found in the SymbolTable
 			{
-				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
 			
@@ -396,8 +405,8 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp != NULL)								// found in the SymbolTable
 			{
-				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
 				error_count++;
 			}
  		  	else
@@ -416,8 +425,8 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp != NULL)								// found in the SymbolTable
 			{
-				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
 			
@@ -434,8 +443,8 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp!=NULL)									// found in the SymbolTable
 			{
-				cout<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
 			else
@@ -523,8 +532,8 @@ statement : var_declaration	{
 			
 			if(temp == NULL)
 			{
-				cout<<"Error at line no "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
 				error_count++;
 			}
 				
@@ -560,8 +569,8 @@ variable : id 	{
 			
 			if(temp == NULL)								// if not declared previously
 			{
-				cout<<"Error at line no "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
 //				$$->setTypeSpecifier("default");					// default type specifier = default -> when error
@@ -571,12 +580,12 @@ variable : id 	{
 			else if(temp->getSize() > 0)							//  {id} is an array
 			{
 				//cout<<temp->getSize()<<endl;
-				cout<<"Error at line no "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
 				error_count++;
 				
-//				$$->setTypeSpecifier(temp->getTypeSpecifier());				// default type specifier = default -> when error
-				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
+				$$->setTypeSpecifier(temp->getTypeSpecifier());				
+//				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
 			}
 			
 			else					
@@ -592,8 +601,8 @@ variable : id 	{
 			
 			if(temp == NULL)								// if not declared previously
 			{
-				cout<<"Error at line no "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
 				error_count++;
 				
 //				$$->setTypeSpecifier("default");					// default type specifier = default -> when error
@@ -604,22 +613,22 @@ variable : id 	{
 			{
 				if(temp->getSize() < 0)							// not an array
 				{
-					cout<<"Error at line no "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
+					cout<<"Error at line "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
 					error_count++;
 					
-//					$$->setTypeSpecifier("default");					// default type specifier = default -> when error
-					$$->setTypeSpecifier("int");						// default type specifier = int -> when error
+//					$$->setTypeSpecifier("default");				// default type specifier = default -> when error
+					$$->setTypeSpecifier("int");					// default type specifier = int -> when error
 				}
 			
 				else if($3->getTypeSpecifier() != "int")				// index is not an integer
 				{
-					cout<<"Error at line no "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
+					cout<<"Error at line "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
 					error_count++;
 					
-//					$$->setTypeSpecifier("default");					// default type specifier = default -> when error
-					$$->setTypeSpecifier("int");						// default type specifier = int -> when error
+//					$$->setTypeSpecifier("default");				// default type specifier = default -> when error
+					$$->setTypeSpecifier("int");					// default type specifier = int -> when error
 				}
 				else
 				{
@@ -636,6 +645,9 @@ expression : logic_expression		{
 
 			cout<<"Line "<<line_count<<": expression : logic_expression "<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
+			
+//			$$->setTypeSpecifier($1->getTypeSpecifier());
+            		type = $1->getTypeSpecifier();
 		}
 		
 	   | variable ASSIGNOP logic_expression		{
@@ -643,62 +655,84 @@ expression : logic_expression		{
 			$$ = new SymbolInfo(($1->getName() + "=" + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": expression : variable ASSIGNOP logic_expression "<<endl<<endl;
 			
-			if($1->getTypeSpecifier() != $3->getTypeSpecifier())				// if the type specfiers don't match
+			cout<<"$1: "<<$1->getTypeSpecifier()<<endl;
+			cout<<"$3: "<<$3->getTypeSpecifier()<<endl;
+
+			if($3->getTypeSpecifier() == "void")						// e.g.	(int) x = foo();	where foo() is void
 			{
-				if(($1->getTypeSpecifier() == "int" && $3->getTypeSpecifier() == "float") || ($1->getTypeSpecifier() == "float" && $3->getTypeSpecifier() == "int"))			
-				{
-					$$->setTypeSpecifier("float");					// if one is float and the other is int, result is float
-				}
-				else
-				{
-					cout<<"Error at line no "<<line_count<<": Type Mismatch"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": Type Mismatch"<<endl<<endl;
-//					cout<<$1->getTypeSpecifier()<<endl;
-//					cout<<$3->getTypeSpecifier()<<endl;
-					error_count++;
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+				$$->setTypeSpecifier("int");						// default type specifier -> int
+			}
+			
+			else if($1->getTypeSpecifier() != $3->getTypeSpecifier())			// if the type specfiers don't match
+			{
+//				if(($1->getTypeSpecifier() == "int" && $3->getTypeSpecifier() == "float") || ($1->getTypeSpecifier() == "float" && $3->getTypeSpecifier() == "int"))			
+//				{
+//					$$->setTypeSpecifier("float");					// if one is float and the other is int, result is float
+//				}
+				
+				cout<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
+				error_count++;
 					
-//					$$->setTypeSpecifier("default");				// default when error
-					$$->setTypeSpecifier("int");					// default type specifier = int -> when error
-				}
+//				$$->setTypeSpecifier("default");				// default when error
+				$$->setTypeSpecifier("int");					// default type specifier = int -> when error
+
 			}
 			else
 			{
 				$$->setTypeSpecifier($1->getTypeSpecifier());	
-				cout<<$1->getName()<<" = "<<$3->getName()<<endl<<endl;
 			}
-			
+			cout<<$1->getName()<<" = "<<$3->getName()<<endl<<endl;	
 		} 
 	   ;
 			
-logic_expression : rel_expression 	{								// TODO: handle void type specifier
+logic_expression : rel_expression 	{								
 
 			cout<<"Line "<<line_count<<": logic_expression : rel_expression "<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
 		}
 		
-		| rel_expression LOGICOP rel_expression		{					// TODO: handle void type specifier
+		| rel_expression LOGICOP rel_expression		{					
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": logic_expression : rel_expression LOGICOP rel_expression "<<endl<<endl;	
 			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
+			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo()||x;	where foo() is void
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;						
+			}
+			
 			$$->setTypeSpecifier("int");
 		}	
 		 ;
 			
-rel_expression	: simple_expression 	{								// TODO: handle void type specifier
+rel_expression	: simple_expression 	{								
 
 			cout<<"Line "<<line_count<<": rel_expression : simple_expression "<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
 		}
 		
-		| simple_expression RELOP simple_expression	{					// TODO: handle void type specifier
+		| simple_expression RELOP simple_expression	{					
 
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": rel_expression : simple_expression RELOP simple_expression "<<endl<<endl;	
 			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
-			$$->setTypeSpecifier("int");
+			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo() < x;	where foo() is void
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+			}
+			
+			$$->setTypeSpecifier("int");							// default type	-> int	
 		}			
 		;
 				
@@ -708,14 +742,24 @@ simple_expression : term 	{
 			cout<<$1->getName()<<endl<<endl;
 		}
 				
-		  | simple_expression ADDOP term 	{						// TODO: handle void type specifiers
+		  | simple_expression ADDOP term 	{						
 		  
 		  	$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
 		  	cout<<"Line "<<line_count<<": simple_expression : simple_expression ADDOP term  "<<endl<<endl;	
 			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
+			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo() + x;	where foo() is void
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+				$$->setTypeSpecifier("int");						// default type	-> int				
+			}
+			
 			if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")	// if any of the operands are float, result is float
 				$$->setTypeSpecifier("float");
+			
 			else
 				$$->setTypeSpecifier($1->getTypeSpecifier());			
 		}
@@ -729,48 +773,62 @@ term :	unary_expression	{
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 	}
 	
-	|  term MULOP unary_expression		{									// TODO: handle void type specifier
+	|  term MULOP unary_expression		{									
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": term : term MULOP unary_expression"<<endl<<endl;	
 			
-			if($2->getName() == "%")									// modulus operator
+			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")		// e.g.	foo() * x;	where foo() is void
 			{
-				if($1->getTypeSpecifier() != "int" || $3->getTypeSpecifier() != "int")			// if any of the operands are not "int"
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+				$$->setTypeSpecifier("int");							// default type	-> int				
+			}
+			
+			if($2->getName() == "%")								// modulus operator
+			{
+				if($1->getTypeSpecifier() != "int" || $3->getTypeSpecifier() != "int")		// if any of the operands are not "int"
 				{
-					cout<<"Error at line no "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
-					error_count++;
-				}
-				if($3->getName() == "0")								// if mod by 0
-				{
-					cout<<"Error at line no "<<line_count<<": Modulus by Zero"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": Modulus by Zero"<<endl<<endl;
+					cout<<"Error at line "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
 					error_count++;
 				}
 				
-				$$->setTypeSpecifier("int");								// default specifier for modulus
-			}
-			else if($2->getName() == "/")									// division operator
-			{
-				if($3->getName() == "0")									// if dov by 0
+				if($3->getName() == "0")							// if mod by 0
 				{
-					cout<<"Error at line no "<<line_count<<": Divide by Zero"<<endl<<endl;
-					errorFile<<"Error at line no "<<line_count<<": Divide by Zero"<<endl<<endl;
+					cout<<"Error at line "<<line_count<<": Modulus by Zero"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Modulus by Zero"<<endl<<endl;
+					error_count++;
+				}
+				
+				$$->setTypeSpecifier("int");							// default specifier for modulus
+			}
+			
+			else if($2->getName() == "/")								// division operator
+			{
+				if($3->getName() == "0")							// if div by 0
+				{
+					cout<<"Error at line "<<line_count<<": Divide by Zero"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Divide by Zero"<<endl<<endl;
 					error_count++;
 					
-					$$->setTypeSpecifier("int");							// default specifier for error -> int
+					$$->setTypeSpecifier("int");						// default specifier for error -> int
 				}
 				
-				else if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")		// if any of the operands are float
-					$$->setTypeSpecifier("float");							// result is float
+				else if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")	// if any of the operands are float
+					$$->setTypeSpecifier("float");						// result is float
+				
 				else
 					$$->setTypeSpecifier($1->getTypeSpecifier());
 			}
-			else												// multiplication operator
+			
+			else											// multiplication operator
 			{
-				if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")		// if any of the operands are float
-					$$->setTypeSpecifier("float");							// result is float
+				if($1->getTypeSpecifier() == "float" || $3->getTypeSpecifier() == "float")	// if any of the operands are float
+					$$->setTypeSpecifier("float");						// result is float
+				
 				else
 					$$->setTypeSpecifier($1->getTypeSpecifier());
 			}
@@ -779,25 +837,45 @@ term :	unary_expression	{
 }
      ;
 
-unary_expression : ADDOP unary_expression  	{							// TODO: handle void type specifier
+unary_expression : ADDOP unary_expression  	{							
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": unary_expression : ADDOP unary_expression"<<endl<<endl;	
 			cout<<$1->getName()<<$2->getName()<<endl<<endl;
 			
-			$$->setTypeSpecifier($2->getTypeSpecifier());
+			if($2->getTypeSpecifier() == "void")						
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+				$$->setTypeSpecifier("int");						// default type	-> int				
+			}
+			
+			else
+				$$->setTypeSpecifier($2->getTypeSpecifier());
 		}
 				
-		 | NOT unary_expression 	{							// TODO: handle void type specifier
+		 | NOT unary_expression 	{							
 			
 			$$ = new SymbolInfo(("!" + $2->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": unary_expression : NOT unary_expression"<<endl<<endl;	
 			cout<<"!"<<$2->getName()<<endl<<endl;
 			
-			$$->setTypeSpecifier($2->getTypeSpecifier());
+			if($2->getTypeSpecifier() == "void")						
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+				$$->setTypeSpecifier("int");						// default type	-> int				
+			}
+			
+			else
+				$$->setTypeSpecifier($2->getTypeSpecifier());
 		}
 				
-		 | factor 	{									// TODO: handle void type specifier
+		 | factor 	{									
 			cout<<"Line "<<line_count<<": unary_expression : factor"<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
 			
@@ -805,11 +883,11 @@ unary_expression : ADDOP unary_expression  	{							// TODO: handle void type sp
 		}
 		 ;
 	
-factor	: variable 	{										// TODO: handle void type specifier
-			cout<<"Line "<<line_count<<": factor : variable"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
-			
-			$$->setTypeSpecifier($1->getTypeSpecifier());
+factor	: variable 	{										
+				cout<<"Line "<<line_count<<": factor : variable"<<endl<<endl;	
+				cout<<$1->getName()<<endl<<endl;
+				
+				$$->setTypeSpecifier($1->getTypeSpecifier());
 			}
 			
 	| id LPAREN argument_list RPAREN	{							//function call
@@ -818,21 +896,69 @@ factor	: variable 	{										// TODO: handle void type specifier
 			$$ = new SymbolInfo(($1->getName() + "(" + $3->getName() + ")"), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": factor : ID LPAREN argument_list RPAREN"<<endl<<endl;	
 			
-			SymbolInfo* temp = st.Lookup($1->getName());					// searching for the funtion being called in ScopeTable
+			SymbolInfo* temp = st.Lookup($1->getName());					// searching for the function being called in all ScopeTables
 			
-			if(temp == NULL)								// no function defined before
+			if(temp == NULL)								// no function declared before
 			{
-				cout<<"Error at line no "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
-				errorFile<<"Error at line no "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
+				cout<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
 //				$$->setTypeSpecifier("default");					// default -> when error
 				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
 			}
-			else										// function previously defined
-				$$->setTypeSpecifier(temp->getTypeSpecifier());	
+			else if(temp->getSize() != -2)							// function not defined
+			{
+				cout<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
+				error_count++;
+					
+//				$$->setTypeSpecifier("default");					// default -> when error
+				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
+				
+			}
+			else										// function defined
+			{
+				if(temp->getParamListSize() != arg_list.size())				// if arg_list and function param_list no. don't match
+				{
+					cout<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
+					error_count++;
+					
+					$$->setTypeSpecifier("int");				// default -> int
+				}
+				else									// arg_list number matches
+				{
+					int i = 0;
+					for(i=0; i<arg_list.size(); i++)
+					{
+//						cout<<i<<endl;
+//						cout<<"arg: "<<arg_list[i]<<endl;
+//						cout<<"param: "<<temp->getParameter(i).param_name<<" "<<temp->getParameter(i).param_type<<endl;
+						
+						if(arg_list[i] != temp->getParameter(i).param_type)
+						{
+							cout<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
+							errorFile<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
+							error_count++;
+							break;
+						}
+					}
+					
+					if(i == arg_list.size())					// arg_list types matches
+					{
+						$$->setTypeSpecifier(temp->getTypeSpecifier());
+					}
+					else
+					{
+						$$->setTypeSpecifier("int");				// default -> int
+					}
+				}
+//				$$->setTypeSpecifier(temp->getTypeSpecifier());
+			}	
 				
 			cout<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
+			arg_list.clear();
 			}
 												
 			
@@ -889,7 +1015,7 @@ argument_list : arguments	{
 			}	
 	|	/* empty string */	{
 			
-			cout<<"Line "<<line_count<<": argument_list : empty"<<endl<<endl;
+			cout<<"Line "<<line_count<<": argument_list : <empty>"<<endl<<endl;
 			}
 			  ;
 	
@@ -898,12 +1024,36 @@ arguments : arguments COMMA logic_expression	{
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": arguments : arguments COMMA logic_expression"<<endl<<endl;	
 			cout<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
+			
+			if($3->getTypeSpecifier() == "void")						
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+//				$$->setTypeSpecifier("int");						// default type	-> int	
+				arg_list.push_back("int");						// default type -> int				
 			}
+			else
+				arg_list.push_back($3->getTypeSpecifier());
+		}
 			
 	      | logic_expression	{
 			
 			cout<<"Line "<<line_count<<": arguments : logic_expression"<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
+			
+			if($1->getTypeSpecifier() == "void")						
+			{
+				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				error_count++;
+				
+//				$$->setTypeSpecifier("int");						// default type	-> int
+				arg_list.push_back("int");						// default type -> int				
+			}
+			else
+				arg_list.push_back($1->getTypeSpecifier());
 		}
 	      ;
  
