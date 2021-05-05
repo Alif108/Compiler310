@@ -360,12 +360,12 @@ public:
 		{
 
 		    outFile<<i<<" --> ";
-		    outFile<<"<"<<temp->getName()<<" : "<<temp->getType()<<"> ";
+		    outFile<<"<"<<temp->getName()<<" , "<<temp->getType()<<"> ";
 		    
 		    while(temp->getNext() != NULL)
 		    {
 		        temp = temp->getNext();
-		        outFile<<"<"<<temp->getName()<<" : "<<temp->getType()<<"> ";
+		        outFile<<"<"<<temp->getName()<<" , "<<temp->getType()<<"> ";
 		    }
 		    outFile<<endl;
 		}

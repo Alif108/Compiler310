@@ -14,21 +14,10 @@ using namespace std;
 
 //extern YYSTYPE yylval;
 
-int line_count = 1;
-int error_count = 0;
+extern int line_count;
+extern int error_count;
 
-//extern SymbolTable st(7);
 void yyerror(char *);
-
-
-//ofstream logout;
-//ofstream tokenout;
-////string str = "";
-//int comment_line = 0;
-
-//char modifyChar(string &s);
-//void modifyString(string &s);
-//void removeCharacter(string &str, char a);
 
 
 %}
@@ -166,35 +155,3 @@ SYMBOL	[\.@#$%^*()_+{}|:><?,;=-\\\/]
 					return ID;
 				}
 %%
-
-
-//int main(int argc,char *argv[]){
-//	
-//	if(argc!=2){
-//		printf("Please provide input file name and try again\n");
-//		return 0;
-//	}
-//	
-//	FILE *fin=fopen(argv[1],"r");
-//	if(fin==NULL){
-//		printf("Cannot open specified file\n");
-//		return 0;
-//	}
-//	
-//	logout.open("1705108_log.txt");
-//	tokenout.open("1705108_token.txt");
-
-//	yyin= fin;
-//	yylex();
-//	fclose(yyin);
-//	
-//	st.printAllScopeTable(logout);
-//	
-//	logout<<"Total Lines: "<<line_count<<endl;
-//	logout<<"Total Errors: "<<error_count<<endl;
-//	
-//	logout.close();
-//	tokenout.close();
-//	
-//	return 0;
-//}

@@ -11,8 +11,8 @@ ofstream errorFile;
 int yyparse(void);
 int yylex(void);
 extern FILE *yyin;
-extern int line_count;
-extern int error_count;
+int line_count = 1;
+int error_count = 0;
 
 SymbolTable st(bucket_size);
 
@@ -254,7 +254,6 @@ parameter_list  : parameter_list COMMA type_specifier id	{
 		
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName() + " " + $4->getName()), "NON_TERMINAL");
  			cout<<"Line "<<line_count<<": parameter_list : parameter_list COMMA type_specifier ID"<<endl<<endl;	
- 			cout<<$1->getName()<<", "<<$3->getName()<<" "<<$4->getName()<<endl<<endl;
  			
  			if(searchParamList($4->getName()))					// checking multiple declaration of parameters
  			{
@@ -264,6 +263,8 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  			}
  			else
  				param_list.push_back({$3->getName(), $4->getName()});
+ 				
+ 			cout<<$1->getName()<<", "<<$3->getName()<<" "<<$4->getName()<<endl<<endl;
 		}
 		
 		| parameter_list COMMA type_specifier	{
@@ -294,29 +295,8 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  		;
 
  		
-compound_statement : LCURL newScope statements RCURL	{
-
-			$$ = new SymbolInfo(("{\n" + $3->getName() + "\n}"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": compound_statement : LCURL statements RCURL"<<endl<<endl;	
-			cout<<"{\n"<<$3->getName()<<"\n}"<<endl<<endl;
+compound_statement : LCURL {										// enter new scope while encountering "{"
 			
-			st.printAllScopeTable(logFile);
-			st.ExitScope();
-			
-		}
-		
- 		    | LCURL newScope RCURL	{
-
-			$$ = new SymbolInfo(((string)"{\n" + (string)"\n}"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": compound_statement : LCURL RCURL"<<endl<<endl;	
-			cout<<"{\n"<<"\n}"<<endl<<endl;
-			
-			st.printAllScopeTable(logFile);
-			st.ExitScope();
-		}
- 		;
- 		
-newScope : 	{
 			st.EnterScope();
 		
 			for(int i=0; i<param_list.size(); i++)
@@ -327,13 +307,46 @@ newScope : 	{
 			}
 					
 			param_list.clear();
-		};
+			
+		} statements RCURL	{
+
+			$$ = new SymbolInfo(("{\n" + $3->getName() + "\n}"), "NON_TERMINAL");
+			cout<<"Line "<<line_count<<": compound_statement : LCURL statements RCURL"<<endl<<endl;	
+			cout<<"{\n"<<$3->getName()<<"\n}"<<endl<<endl;
+			
+			st.printAllScopeTable(logFile);
+			st.ExitScope();
+			
+		}
+		
+ 		    | LCURL {										// enter new scope while encountering "{"
+			
+			st.EnterScope();
+		
+			for(int i=0; i<param_list.size(); i++)
+			{
+				SymbolInfo* si = new SymbolInfo(param_list[i].param_name, "ID");
+				si->setTypeSpecifier(param_list[i].param_type);
+				st.Insert(*si);	
+			}
+					
+			param_list.clear();
+			
+		} RCURL	{
+
+			$$ = new SymbolInfo(((string)"{\n" + (string)"\n}"), "NON_TERMINAL");
+			cout<<"Line "<<line_count<<": compound_statement : LCURL RCURL"<<endl<<endl;	
+			cout<<"{\n"<<"\n}"<<endl<<endl;
+			
+			st.printAllScopeTable(logFile);
+			st.ExitScope();
+		}
+ 		;
  		    
 var_declaration : type_specifier declaration_list SEMICOLON	{
 
 				$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + ";"), "NON_TERMINAL");
 				cout<<"Line "<<line_count<<": var_declaration : type_specifier declaration_list SEMICOLON"<<endl<<endl;
-				cout<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
 				
 				if($1->getName() == "void")								// e.g.		void x, y, z;
 				{
@@ -352,6 +365,7 @@ var_declaration : type_specifier declaration_list SEMICOLON	{
 						st.Insert(*si);								// inserting variable in SymbolTable
 					}
 				}
+				cout<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
 				
 //				st.printAllScopeTable(logFile);
 				variable_list.clear();							// emptying the variable_list container after inserting
@@ -563,7 +577,6 @@ expression_statement 	: SEMICOLON	{
 	  
 variable : id 	{
 			cout<<"Line "<<line_count<<": variable : ID"<<endl<<endl;
-			cout<<$1->getName()<<endl<<endl;
 			
 			SymbolInfo* temp = st.Lookup($1->getName());					// searching it in the SymbolTable		
 			
@@ -590,6 +603,8 @@ variable : id 	{
 			
 			else					
 				$$->setTypeSpecifier(temp->getTypeSpecifier());				// setting the type specifier
+				
+			cout<<$1->getName()<<endl<<endl;
 		}	
 		
 	 | id LTHIRD expression RTHIRD {								// array index
@@ -655,8 +670,8 @@ expression : logic_expression		{
 			$$ = new SymbolInfo(($1->getName() + "=" + $3->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": expression : variable ASSIGNOP logic_expression "<<endl<<endl;
 			
-			cout<<"$1: "<<$1->getTypeSpecifier()<<endl;
-			cout<<"$3: "<<$3->getTypeSpecifier()<<endl;
+//			cout<<"$1: "<<$1->getTypeSpecifier()<<endl;
+//			cout<<"$3: "<<$3->getTypeSpecifier()<<endl;
 
 			if($3->getTypeSpecifier() == "void")						// e.g.	(int) x = foo();	where foo() is void
 			{
@@ -669,18 +684,20 @@ expression : logic_expression		{
 			
 			else if($1->getTypeSpecifier() != $3->getTypeSpecifier())			// if the type specfiers don't match
 			{
-//				if(($1->getTypeSpecifier() == "int" && $3->getTypeSpecifier() == "float") || ($1->getTypeSpecifier() == "float" && $3->getTypeSpecifier() == "int"))			
-//				{
-//					$$->setTypeSpecifier("float");					// if one is float and the other is int, result is float
-//				}
+				if($1->getTypeSpecifier() == "float" && $3->getTypeSpecifier() == "int")			
+				{
+					$$->setTypeSpecifier("float");					// if one is float and the other is int, result is float
+				}
 				
-				cout<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
-				errorFile<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
-				error_count++;
-					
-//				$$->setTypeSpecifier("default");				// default when error
-				$$->setTypeSpecifier("int");					// default type specifier = int -> when error
-
+				else
+				{
+					cout<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
+					errorFile<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
+					error_count++;
+						
+	//				$$->setTypeSpecifier("default");				// default when error
+					$$->setTypeSpecifier("int");					// default type specifier = int -> when error
+				}
 			}
 			else
 			{
