@@ -5,7 +5,7 @@
 #include<fstream>
 //#define YYSTYPE SymbolInfo*
 
-#include "SymbolTable.h"
+#include "1705108_SymbolTable.h"
 #include "y.tab.h"
 
 using namespace std;
