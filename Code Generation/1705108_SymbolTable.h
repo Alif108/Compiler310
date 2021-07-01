@@ -22,11 +22,14 @@ class SymbolInfo
 	string type_specifier;								// for function
 	int size;
 	vector<param>param_list;							//container for function parameter
+	vector<string>argAddressList;						// argument address container for functions
 
 	string code;										// for assembly code
 	string address;
 
 public:
+
+	//**asm**//
 
     SymbolInfo(string name, string type)
     {
@@ -126,6 +129,20 @@ public:
     string getAddress()
     {
     	return address;
+    }
+
+    void pushFuncArgsAddress(string addr)
+    {
+    	argAddressList.push_back(addr);
+    }
+
+    string getFuncArgsAddress(int i)
+    {
+    	return argAddressList[i];
+    }
+    int getFuncArgsAddressSize()
+    {
+    	return argAddressList.size();
     }
 
 };

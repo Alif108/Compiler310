@@ -22,6 +22,8 @@ int labelCount = 0;									// how many labels
 int tempCount = 0;									// how many temp registers
 int scopeCount = 0;									// how many scopes 			// for assembly variable declarations
 
+bool is_main = false;
+
 SymbolTable st(bucket_size);
 
 string type, id_name;								// for functions/variable
@@ -46,7 +48,12 @@ vector<variable>variable_list;							// container for variable
 vector<parameter>param_list;							// container for function parameter
 vector<string>arg_list;									// container for arguments
 
-vector<string>data_list;								// container for data segment
+//**asm**//
+vector<string>data_list;								// container for data segment declaration
+vector<string>tempArgAddress;							// container for temporary argument addresses for function calls
+vector<string>argumentAddressList;						// container for assembly variables under a function
+vector<string>asmVariables;								// container for all the assembly variables declared
+
 
 
 
@@ -84,38 +91,24 @@ char *newTemp()											// for adding a new temp register
 }
 
 string makeAsmVariable(string name)
-{
-	string ass_var = name;
-	string temp;
-	stringstream ss;
-
-	ss << scopeCount;
-	ss >> temp;
-	name += temp;										// concatenating the scope number
-
-	return name;
+{									
+	return (name + to_string(scopeCount));				// concatenating the scope number
 }
 
 string makeAsmVariableDeclaration(string name, int size)
 {
 	name = makeAsmVariable(name);
-	stringstream ss;
-	string temp;
 
 	if(size == -1)										// not an array, just a variable
 	{								
-		name += " dw ?";								// assembly variable declaration 		(e.g.) -> 	"A1 dw ?"
+		name += " dw ?";								// assembly variable declaration 		(e.g.) -> 	"a1 dw ?"
 	}
 	else 												// array
 	{
 		name += " dw ";
-
-		ss << size;
-		ss >> temp;
-		name += temp;
-		name += " DUP(?)";								// assembly array declaration 		(e.g.) -> 	"A1 dw 3 DUP(?)"							
+		name += to_string(size);
+		name += " DUP(?)";								// assembly array declaration 		(e.g.) -> 	"a1 dw 3 DUP(?)"							
 	}
-	
 	return name;
 }
 
@@ -167,6 +160,10 @@ start : program
 
 		if(!error_count)
 		{
+			string label1 = newLabel();
+			string label2 = newLabel();
+			// string exitLabel = newLabel();
+
 			assembly_code += ".MODEL small\n";
 			assembly_code += ".STACK 100H\n";
 			assembly_code += ".DATA\n";
@@ -179,44 +176,75 @@ start : program
 			assembly_code += "\n";
 
 			assembly_code += ".CODE\n";
-			assembly_code += "PRINTLN PROC\n\n";								// print procedure
-			assembly_code += "push ax\n";
-			assembly_code += "push bx\n";
-			assembly_code += "push cx\n";
-			assembly_code += "push dx\n";
+			// assembly_code += "PRINTLN PROC\n\n";								// print procedure
+			// assembly_code += "push ax\n";
+			// assembly_code += "push bx\n";
+			// assembly_code += "push cx\n";
+			// assembly_code += "push dx\n";
 
-			assembly_code += "mov cx, 0\n";
-			assembly_code += "mov dx, 0\n";
+			// assembly_code += "mov cx, 0\n";
+			// assembly_code += "mov dx, 0\n";
 
-			string label1 = newLabel();
-			string label2 = newLabel();
-			string exitLabel = newLabel();
+			// assembly_code += (label1 + ":\n\n");
+			// assembly_code += "cmp ax, 0\n";
+			// assembly_code += ("je " + label2 + "\n\n");
+			// assembly_code += "mov bx, 10\n";
+			// assembly_code += "div bx\n\n";
+			// assembly_code += "push dx\n";
+			// assembly_code += "inc cx\n\n";
+			// assembly_code += "xor dx, dx\n";
+			// assembly_code += ("jmp " + label1 + "\n\n");
+			// assembly_code += (label2 + ":\n\n");
+			// assembly_code += "cmp cx, 0\n";
+			// assembly_code += "je " + exitLabel + "\n\n";
+			// assembly_code += "pop dx\n";
+			// assembly_code += "add dx, 48\n\n";
+			// assembly_code += "mov ah, 2\n";
+			// assembly_code += "int 21h\n\n";
+			// assembly_code += "dec cx\n";
+			// assembly_code += ("jmp " + label2 + "\n\n");
+			// assembly_code += (exitLabel + ":\n");
 
-			assembly_code += (label1 + ":\n\n");
-			assembly_code += "cmp ax, 0\n";
-			assembly_code += ("je " + label2 + "\n\n");
-			assembly_code += "mov bx, 10\n";
-			assembly_code += "div bx\n\n";
-			assembly_code += "push dx\n";
-			assembly_code += "inc cx\n\n";
-			assembly_code += "xor dx, dx\n";
-			assembly_code += ("jmp " + label1 + "\n\n");
-			assembly_code += (label2 + ":\n\n");
-			assembly_code += "cmp cx, 0\n";
-			assembly_code += "je " + exitLabel + "\n\n";
-			assembly_code += "pop dx\n";
-			assembly_code += "add dx, 48\n\n";
-			assembly_code += "mov ah, 2\n";
-			assembly_code += "int 21h\n\n";
-			assembly_code += "dec cx\n";
-			assembly_code += ("jmp " + label2 + "\n\n");
-			assembly_code += (exitLabel + ":\n");
+			// assembly_code += "pop dx\n";
+			// assembly_code += "pop cx\n";
+			// assembly_code += "pop bx\n";
+			// assembly_code += "pop ax\n";
+			// assembly_code += "ret\n";
+			// assembly_code += "PRINTLN ENDP\n\n";
 
-			assembly_code += "pop dx\n";
-			assembly_code += "pop cx\n";
-			assembly_code += "pop bx\n";
-			assembly_code += "pop ax\n";
-			assembly_code += "ret\n";
+			assembly_code += "PRINTLN PROC\n\n";
+			assembly_code += "\tpush ax\n";
+			assembly_code += "\tpush bx\n";
+			assembly_code += "\tpush cx\n";
+			assembly_code += "\tpush dx\n";
+
+			assembly_code += "\tmov bx, 10\n";
+			assembly_code += "\tmov cx, 0\n";
+			assembly_code += (label1 + ":\n");
+			assembly_code += "\tmov dx, 0\n";
+			assembly_code += "\tdiv bx\n";
+			assembly_code += "\tpush dx\n";
+			assembly_code += "\tinc cx\n";
+			assembly_code += "\tcmp ax, 0\n";
+			assembly_code += ("\tjne " + label1 + "\n");
+			assembly_code += (label2 + ":\n");
+			assembly_code += "\tmov ah, 2\n";
+			assembly_code += "\tpop dx\n";
+			assembly_code += "\tadd dl, '0'\n";
+			assembly_code += "\tint 21h\n";
+			assembly_code += "\tdec cx\n";
+			assembly_code += "\tcmp cx, 0\n";
+			assembly_code += ("\tjne " + label2 + "\n");
+			assembly_code += "\tmov dl, 0Ah\n";
+			assembly_code += "\tint 21h\n";
+			assembly_code += "\tmov dl, 0Dh\n";
+			assembly_code += "\tint 21h\n";
+
+			assembly_code += "\tpop dx\n";
+			assembly_code += "\tpop cx\n";
+			assembly_code += "\tpop bx\n";
+			assembly_code += "\tpop ax\n";
+			assembly_code += "\tret\n";
 			assembly_code += "PRINTLN ENDP\n\n";
 
 			assembly_code += $1->getCode();										// code segment
@@ -231,6 +259,10 @@ program : program unit {
 			$$ = new SymbolInfo(($1->getName() + "\n" + $2->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": program : program unit"<<endl<<endl;	
 			cout<<$1->getName()<<"\n"<<$2->getName()<<endl<<endl;
+
+			//*asm**//
+			$$->appendCode($1->getCode());
+			$$->appendCode($2->getCode());
 			}
 			
 	| unit	{
@@ -284,14 +316,14 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 
 			//**asm**//
 			$$->appendCode($2->getName() + "_proc PROC\n");			// making function name // e.g. f_proc
-			$$->appendCode("push ax\n");
-			$$->appendCode("push bx\n");
-			$$->appendCode("push cx\n");
-			$$->appendCode("push dx\n");
-			$$->appendCode("push di\n\n");
+			$$->appendCode("\tpush ax\n");
+			$$->appendCode("\tpush bx\n");
+			$$->appendCode("\tpush cx\n");
+			$$->appendCode("\tpush dx\n");
+			$$->appendCode("\tpush di\n\n");
 			$$->appendCode($8->getCode());
 			$$->appendCode($2->getName() + "_proc ENDP\t");
-			$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 		}
 		
 		| type_specifier id update_func_info LPAREN RPAREN insert_func_def_info compound_statement		{
@@ -303,30 +335,30 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 			//**asm**//
 			if($2->getName() == "main")									// if main function
 			{
-				$$->appendCode("MAIN PROC\n");
-				$$->appendCode("; DATA SEGMENT INITIALIZATION\n\n");
-				$$->appendCode("mov ax, @DATA\n");
-				$$->appendCode("mov ds, ax\n\n");						// data segment init part
+				$$->appendCode("\tMAIN PROC\n");
+				$$->appendCode("\t; DATA SEGMENT INITIALIZATION\n\n");
+				$$->appendCode("\tmov ax, @DATA\n");
+				$$->appendCode("\tmov ds, ax\n\n");						// data segment init part
 
 				$$->appendCode($7->getCode() + "\n");					// main code part
 
-				$$->appendCode("; DOS EXIT\n");
-				$$->appendCode("mov ah, 4CH\n");
-				$$->appendCode("int 21H\n");							// dos exit 
+				$$->appendCode("\t; DOS EXIT\n");
+				$$->appendCode("\tmov ah, 4CH\n");
+				$$->appendCode("\tint 21H\n");							// dos exit 
 
-				$$->appendCode("MAIN ENDP\n");
+				$$->appendCode("\tMAIN ENDP\n");
 			}
 			else  														// not main function
 			{
 				$$->appendCode($2->getName() + "_proc PROC\n");			// making function name // e.g. f_proc
-				$$->appendCode("push ax\n");
-				$$->appendCode("push bx\n");
-				$$->appendCode("push cx\n");
-				$$->appendCode("push dx\n");
-				$$->appendCode("push di\n\n");
+				$$->appendCode("\tpush ax\n");
+				$$->appendCode("\tpush bx\n");
+				$$->appendCode("\tpush cx\n");
+				$$->appendCode("\tpush dx\n");
+				$$->appendCode("\tpush di\n\n");
 				$$->appendCode($7->getCode());
 				$$->appendCode($2->getName() + "_proc ENDP\t");
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 		}
  		;
@@ -348,9 +380,19 @@ insert_func_def_info 	: 	{
 						for(int i=0; i<param_list.size(); i++)								// adding parameters
 						{
 							si->addParameter(param_list[i].param_type, param_list[i].param_name);
+						}
+
+						// cout<<argumentAddressList.size()<<endl;
+						for(int i=0; i<argumentAddressList.size(); i++)
+						{
+							si->pushFuncArgsAddress(argumentAddressList[i]);
 						}						
-			
+						// cout<<si->getName()<<" "<<si->getFuncArgsAddressSize()<<endl;
 						st.Insert(*si);
+
+						//NOTICE//
+						if(func_name == "main")												// this is used to remove asm code
+							is_main = true;													// of "return 0" from main
 					}
 					
 					else if(temp->getSize() == -3)											// function declared before
@@ -412,10 +454,16 @@ insert_func_dec_info 	: 	{
 						{
 							si->addParameter(param_list[i].param_type, param_list[i].param_name);
 						}
+
+						for(int i=0; i<argumentAddressList.size(); i++)
+						{
+							si->pushFuncArgsAddress(argumentAddressList[i]);
+						}	
 							
 						st.Insert(*si);							// inserting function info
 						
-						param_list.clear();						// emtying the container
+						param_list.clear();						// emptying the container
+						argumentAddressList.clear();
 					}
 					else									// some other id with the same name is found
 					{
@@ -438,7 +486,10 @@ parameter_list  : parameter_list COMMA type_specifier id	{
 				error_count++;
  			}
  			else
+ 			{
  				param_list.push_back({$3->getName(), $4->getName()});
+ 				argumentAddressList.push_back(($4->getName() + to_string(scopeCount+1)));		// NOTICE
+ 			}
  				
  			cout<<$1->getName()<<", "<<$3->getName()<<" "<<$4->getName()<<endl<<endl;
 		}
@@ -459,6 +510,7 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  			cout<<$1->getName()<<" "<<$2->getName()<<endl<<endl;
  			
  			param_list.push_back({$1->getName(), $2->getName()});
+ 			argumentAddressList.push_back(($2->getName() + to_string(scopeCount+1)));		// NOTICE
  		}
  		
 		| type_specifier	{
@@ -475,7 +527,7 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 			
 			st.EnterScope();
 			scopeCount++;											// increasing the scope count
-		
+
 			for(int i=0; i<param_list.size(); i++)
 			{
 				SymbolInfo* si = new SymbolInfo(param_list[i].param_name, "ID");
@@ -486,9 +538,10 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 				st.Insert(*si);															// inserting variable in SymbolTable
 
 				data_list.push_back(makeAsmVariableDeclaration(param_list[i].param_name, -1));
+				asmVariables.push_back(makeAsmVariable(param_list[i].param_name));		// pushing the variable in assembly var list
 			}
-					
 			param_list.clear();
+			argumentAddressList.clear();
 			
 		} statements RCURL	{
 
@@ -500,14 +553,15 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 			st.ExitScope();
 
 			//***asm***//
-			$$->appendCode($3->getCode());			
+			$$->appendCode($3->getCode());
+			$$->setAddress($3->getAddress());			
 		}
 		
  		    | LCURL {										// enter new scope while encountering "{"
 			
 			st.EnterScope();
-			scopeCount++;											// increasing the scope count
-		
+			scopeCount++;									// increasing the scope count
+
 			for(int i=0; i<param_list.size(); i++)
 			{
 				SymbolInfo* si = new SymbolInfo(param_list[i].param_name, "ID");
@@ -517,10 +571,12 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 				si->setAddress(makeAsmVariable(param_list[i].param_name));				// updating the corresponding assembly variable
 				st.Insert(*si);															// inserting variable in SymbolTable
 
-				data_list.push_back(makeAsmVariableDeclaration(param_list[i].param_name, -1));	
+				data_list.push_back(makeAsmVariableDeclaration(param_list[i].param_name, -1));
+				asmVariables.push_back(makeAsmVariable(param_list[i].param_name));		// pushing the variable in assembly var list
 			}
 					
 			param_list.clear();
+			argumentAddressList.clear();
 			
 		} RCURL	{
 
@@ -712,6 +768,29 @@ statement : var_declaration	{
 	  		$$ = new SymbolInfo(("for(" + $3->getName() + $4->getName() + $5->getName() + ")" + $7->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": statement : FOR LPAREN expression_statement expression_statement expression RPAREN 			statement"<<endl<<endl;	
 			cout<<"for("<<$3->getName()<<$4->getName()<<$5->getName()<<")"<<$7->getName()<<endl<<endl;
+
+			//**asm**//
+			if($3->getName() != ";" && $4->getName() != ";")					// if not "for( ; ; )"
+			{
+				string label1 = newLabel();
+                string label2 = newLabel();
+
+                $$->appendCode($3->getCode());									// code for "i = 0"
+                $$->appendCode("\t\n");
+                $$->appendCode(label1 + ":\n");									// L1:
+                $$->appendCode($4->getCode());									// code for "i < 10"
+                $$->appendCode("\t\n");
+                $$->appendCode("\tmov ax," + $4->getAddress() + "\n");			// mov ax, t3 (address of i < 10)
+                $$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
+                $$->appendCode("\tje " + label2 + "\n");							// je L2
+                $$->appendCode("\t\n");
+                $$->appendCode($7->getCode());									// code for block inside for loop
+                $$->appendCode("\t\n");
+                $$->appendCode($5->getCode());									// i++
+                $$->appendCode("\tjmp " + label1 + "\n");							// jmp L1
+                $$->appendCode(label2 + ":\t");									// L2:
+                $$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			}
 		}
 		
 	  | IF LPAREN expression RPAREN statement	%prec LOWER_THAN_ELSE	{
@@ -719,6 +798,17 @@ statement : var_declaration	{
 	  		$$ = new SymbolInfo(("if(" + $3->getName() + ")" + $5->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": statement : IF LPAREN expression RPAREN statement"<<endl<<endl;	
 			cout<<"if("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
+
+			//**asm**//
+			string label = newLabel();
+
+			$$->appendCode($3->getCode());										// code of condition
+			$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");				// mov ax, t0  (computed value of condition)	
+			$$->appendCode("\tcmp ax, 0\n");										// cmp ax, 0
+			$$->appendCode("\tje " + label + "\n");								// je L
+			$$->appendCode($5->getCode());										// code of statement
+			$$->appendCode(label + ":\t");										// L:
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 		}
 		
 	  | IF LPAREN expression RPAREN statement ELSE statement	{
@@ -732,15 +822,15 @@ statement : var_declaration	{
 			string label2 = newLabel();
 
 			$$->appendCode($3->getCode());
-			$$->appendCode("mov ax, " + $3->getAddress() + "\n");				// mov ax, t0
-			$$->appendCode("cmp ax, 0\n");										// cmp ax, 0
-			$$->appendCode("je " + label1 + "\n");								// je L1:
+			$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");				// mov ax, t0
+			$$->appendCode("\tcmp ax, 0\n");										// cmp ax, 0
+			$$->appendCode("\tje " + label1 + "\n");								// je L1:
 			$$->appendCode($5->getCode());										// code
-			$$->appendCode("jmp " + label2 + "\n");								// jmp L2:
+			$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2:
 			$$->appendCode(label1 + ":\n");										// L1:
 			$$->appendCode($7->getCode());										// code
 			$$->appendCode(label2 + ":\t");										// L2:
-			$$->appendCode("; line no." + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no." + to_string(line_count) + "\n\n");
 		}
 		
 	  | WHILE LPAREN expression RPAREN statement	{
@@ -748,6 +838,21 @@ statement : var_declaration	{
 	  		$$ = new SymbolInfo(("while(" + $3->getName() + ")" + $5->getName()), "NON_TERMINAL");
 			cout<<"Line "<<line_count<<": statement : WHILE LPAREN expression RPAREN statement"<<endl<<endl;	
 			cout<<"while("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
+
+			//**asm**//
+			string label1 = newLabel();
+           	string label2 = newLabel();
+
+        	$$->appendCode(label1 + ":\n");									// L1:
+        	$$->appendCode($3->getCode());									// code for "i < 10"
+        	$$->appendCode("\tmov ax," + $3->getAddress() + "\n");			// mov ax, t3 (address of i < 10)
+        	$$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
+        	$$->appendCode("\tje " + label2 + "\n");							// je L2
+        	$$->appendCode("\t\n");
+        	$$->appendCode($5->getCode());									// code for block inside while loop
+         	$$->appendCode("\tjmp " + label1 + "\n");							// jmp L1
+          	$$->appendCode(label2 + ":\t");									// L2:
+          	$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 		}
 		
 	  | PRINTLN LPAREN id RPAREN SEMICOLON		{
@@ -766,12 +871,12 @@ statement : var_declaration	{
 			else
 			{
 				//**asm**//
-				$$->appendCode("push ax\n");									// push ax
-				$$->appendCode("mov ax, " + temp->getAddress() + "\n");			// mov ax, a1
-				$$->appendCode("call PRINTLN\n");								// call PRINTLN
-				$$->appendCode("pop ax\t");										// pop ax
-				$$->appendCode("; line no. " + to_string(line_count));
-				$$->appendCode("\n\n");
+				$$->appendCode("\tpush ax\n");									// push ax
+				$$->appendCode("\tmov ax, " + temp->getAddress() + "\n");			// mov ax, a1
+				$$->appendCode("\tcall PRINTLN\n");								// call PRINTLN
+				$$->appendCode("\tpop ax\t");										// pop ax
+				$$->appendCode("\t; line no. " + to_string(line_count));
+				$$->appendCode("\t\n\n");
 			}
 
 			cout<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
@@ -785,16 +890,21 @@ statement : var_declaration	{
 			cout<<"return "<<$2->getName()<<";"<<endl<<endl;
 
 			//**asm**//
-			$$->appendCode($2->getCode());
-			$$->appendCode("mov ax, " + $2->getAddress() + "\n");
-			$$->appendCode("mov ret_temp, ax\n");
-			$$->appendCode("pop di\n");
-			$$->appendCode("pop dx\n");
-			$$->appendCode("pop cx\n");
-			$$->appendCode("pop bx\n");
-			$$->appendCode("pop ax\n");
-			$$->appendCode("ret\t");
-			$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+			if(!is_main)
+			{
+				$$->appendCode($2->getCode());
+				$$->appendCode("\tmov ax, " + $2->getAddress() + "\n");
+				$$->appendCode("\tmov ret_temp, ax\n");
+				$$->appendCode("\tpop di\n");
+				$$->appendCode("\tpop dx\n");
+				$$->appendCode("\tpop cx\n");
+				$$->appendCode("\tpop bx\n");
+				$$->appendCode("\tpop ax\n");
+				$$->appendCode("\tret\t");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			}
+			else
+				$$->appendCode($2->getCode());
 		}
 	  ;
 	  
@@ -898,9 +1008,9 @@ variable : id 	{
 
 					//**asm**//
 					$$->appendCode($3->getCode());
-					$$->appendCode("mov di, " + $3->getAddress() + "\n");					// mov di, 2 
-					$$->appendCode("add di, di\t");											// add di, di
-					$$->appendCode("; line no. " + to_string(line_count) + "\n");
+					$$->appendCode("\tmov di, " + $3->getAddress() + "\n");					// mov di, 2 
+					$$->appendCode("\tadd di, di\t");											// add di, di
+					$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 					$$->setAddress(temp->getAddress());						// setting up the assembly code symbol	
 				}
 			
@@ -959,30 +1069,33 @@ expression : logic_expression		{
 				{
 					$$->appendCode($1->getCode());
 					$$->appendCode($3->getCode());
-					$$->appendCode("mov ax, " + $3->getAddress() + "\n");			// e.g. mov ax, 2
-					$$->appendCode("mov " + $1->getAddress() + ", ax \t"); 			// e.g. mov a_1, ax
-					$$->appendCode("; line no. " + to_string(line_count));
-					$$->appendCode("\n\n");
+					$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");			// e.g. mov ax, 2
+					$$->appendCode("\tmov " + $1->getAddress() + ", ax \t"); 			// e.g. mov a_1, ax
+					$$->appendCode("\t; line no. " + to_string(line_count));
+					$$->appendCode("\t\n\n");
+					
 					$$->setAddress($1->getAddress());
 				}
-				else if($1->getSize() > 0 && $3->getSize() < 0) 						// $1 is array  // e.g. c[1] = 2
+				else if($1->getSize() > 0 && $3->getSize() < 0) 					// $1 is array  // e.g. c[1] = 2
 				{
 					$$->appendCode($1->getCode());
 					$$->appendCode($3->getCode());
-					$$->appendCode("mov ax, " + $3->getAddress() + "\n");			// mov ax, 2
-					$$->appendCode("mov " + $1->getAddress() + "[di], ax\t");		// mov c1[di], ax
-					$$->appendCode("; line no. " + to_string(line_count));
-					$$->appendCode("\n\n");
+					$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");			// mov ax, 2
+					$$->appendCode("\tmov " + $1->getAddress() + "[di], ax\t");		// mov c1[di], ax
+					$$->appendCode("\t; line no. " + to_string(line_count));
+					$$->appendCode("\t\n\n");
+					
 					$$->setAddress($1->getAddress());
 				}
 				else if($1->getSize() < 0 && $3->getSize() > 0)						// $3 is array // e.g. a = c[2]
 				{
 					$$->appendCode($1->getCode());
 					$$->appendCode($3->getCode());
-					$$->appendCode("mov ax, " + $3->getAddress() + "[di]\n");		// mov ax, c1[di]
-					$$->appendCode("mov " + $1->getAddress() + ", ax\t");			// mov a1, ax
-					$$->appendCode("; line no. " + to_string(line_count));
-					$$->appendCode("\n\n");
+					$$->appendCode("\tmov ax, " + $3->getAddress() + "[di]\n");		// mov ax, c1[di]
+					$$->appendCode("\tmov " + $1->getAddress() + ", ax\t");			// mov a1, ax
+					$$->appendCode("\t; line no. " + to_string(line_count));
+					$$->appendCode("\t\n\n");
+					
 					$$->setAddress($1->getAddress());
 				}
 				else  																// both are array // e.g. a[2] = c[3]
@@ -991,12 +1104,12 @@ expression : logic_expression		{
 					data_list.push_back(temp + " dw ?");							// Pushing the new temp variable in data segment
 
 					$$->appendCode($3->getCode());									// mov di, 0; add di, di
-					$$->appendCode("mov ax, " + $3->getAddress() + "[di]\n");		// mov ax, c1[di]
-					$$->appendCode("mov " + temp + ", ax\n");						// mov t6, ax
+					$$->appendCode("\tmov ax, " + $3->getAddress() + "[di]\n");		// mov ax, c1[di]
+					$$->appendCode("\tmov " + temp + ", ax\n");						// mov t6, ax
 					$$->appendCode($1->getCode());									// mov di, 1; add di, di
-					$$->appendCode("mov ax, " + temp + "\n");						// mov ax, t6
-					$$->appendCode("mov " + $1->getAddress() + ", ax\t");			// mov a1[di], ax
-					$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+					$$->appendCode("\tmov ax, " + temp + "\n");						// mov ax, t6
+					$$->appendCode("\tmov " + $1->getAddress() + ", ax\t");			// mov a1[di], ax
+					$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 
 					$$->setAddress($1->getAddress());
 				}
@@ -1037,31 +1150,31 @@ logic_expression : rel_expression 	{
 			{
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
-				$$->appendCode("cmp " + $1->getAddress() + ", 0\n");				// cmp a1, 0
-				$$->appendCode("je " + label1 + "\n");								// je L1
-				$$->appendCode("cmp " + $3->getAddress() + ", 0\n");				// cmp b1, 0
-				$$->appendCode("je " + label1 + "\n");								// je L1
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t1, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L2
+				$$->appendCode("\tcmp " + $1->getAddress() + ", 0\n");				// cmp a1, 0
+				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tcmp " + $3->getAddress() + ", 0\n");				// cmp b1, 0
+				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t1, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2
 				$$->appendCode(label1 + ":\n");										// L1 :
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t1, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t1, 0
 				$$->appendCode(label2 + ":\t");										// L2 :
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else if($2->getName() == "||")
 			{
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
-				$$->appendCode("cmp " + $1->getAddress() + ", 1\n");				// cmp a1, 1
-				$$->appendCode("je " + label1 + "\n");								// je L1
-				$$->appendCode("cmp " + $3->getAddress() + ", 1\n");				// cmp b1, 1
-				$$->appendCode("je " + label1 + "\n");								// je L1
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t1, 0
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L2
+				$$->appendCode("\tcmp " + $1->getAddress() + ", 1\n");				// cmp a1, 1
+				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tcmp " + $3->getAddress() + ", 1\n");				// cmp b1, 1
+				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t1, 0
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2
 				$$->appendCode(label1 + ":\n");										// L1 :
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t1, 1
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t1, 1
 				$$->appendCode(label2 + ":\t");										// L2 :
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 		}	
 		 ;
@@ -1095,75 +1208,75 @@ rel_expression	: simple_expression 	{
 			//**asm**//
 			if($2->getName() == "<")
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("jge " + label1 + "\n");								// jge L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tjge " + label1 + "\n");								// jge L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else if($2->getName() == ">")
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("jle " + label1 + "\n");								// jle L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tjle " + label1 + "\n");								// jle L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else if($2->getName() == "<=")
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("jg " + label1 + "\n");								// jg L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tjg " + label1 + "\n");								// jg L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else if($2->getName() == ">=")
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("jl " + label1 + "\n");								// jl L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tjl " + label1 + "\n");								// jl L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else if($2->getName() == "==")
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("jne " + label1 + "\n");								// jne L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tjne " + label1 + "\n");								// jne L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			else  		// RELOP -> !=
 			{
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 2
-				$$->appendCode("cmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("je " + label1 + "\n");								// je L0
-				$$->appendCode("mov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("jmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
+				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
+				$$->appendCode("\tje " + label1 + "\n");								// je L0
+				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
+				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
-				$$->appendCode("mov " + temp + ", 0\n");							// mov t3, 0
+				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			$$->setAddress(temp);
 		}			
@@ -1197,20 +1310,21 @@ simple_expression : term 	{
 				$$->setTypeSpecifier($1->getTypeSpecifier());	
 
 			//**asm**//
-
 			string temp = newTemp();
 			data_list.push_back(temp + " dw ?");								// Pushing the new temp variable in data segment
 			$$->setAddress(temp); 
 
-			$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// e.g. mov ax, a1
+			$$->appendCode($1->getCode());
+			$$->appendCode($3->getCode());
+			$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// e.g. mov ax, a1
 
 			if($2->getName() == "+")
-				$$->appendCode("add ax, " + $3->getAddress() + "\n");			// e.g. add ax, b1
+				$$->appendCode("\tadd ax, " + $3->getAddress() + "\n");			// e.g. add ax, b1
 			else
-				$$->appendCode("sub ax, " + $3->getAddress() + "\n");			// e.g. sub ax, b1
+				$$->appendCode("\tsub ax, " + $3->getAddress() + "\n");			// e.g. sub ax, b1
 
-			$$->appendCode("mov " + temp + ", ax\n");							// e.b. mov t0, ax
-			$$->appendCode("; line no. " + to_string(line_count) +"\n\n");		
+			$$->appendCode("\tmov " + temp + ", ax\n");							// e.b. mov t0, ax
+			$$->appendCode("\t; line no. " + to_string(line_count) +"\n\n");		
 		}
 		;
 					
@@ -1261,15 +1375,14 @@ term :	unary_expression	{
 					data_list.push_back(temp + " dw ?");				// Pushing the new temp variable in data segment
 					$$->setAddress(temp);
 
-					$$->appendCode($1->getCode());
+					$$->appendCode($1->getCode());								
 					$$->appendCode($3->getCode());
-					$$->appendCode("mov ax, " + $1->getAddress() + "\n");
-					$$->appendCode("mov bx, " + $3->getAddress() + "\n");
-					$$->appendCode("xor dx, dx\n");
-					$$->appendCode("div bx\n");
-					$$->appendCode("mov " + temp + ", dx\t");
-					$$->appendCode("; line no. " + to_string(line_count));
-					$$->appendCode("\n\n");
+					$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");		// mov ax, a1
+					$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");		// mov bx, b1
+					$$->appendCode("\txor dx, dx\n");								// xor dx, dx
+					$$->appendCode("\tdiv bx\n");									// div bx
+					$$->appendCode("\tmov " + temp + ", dx\t");					// mov t0, dx		// REMAINDER is in dx
+					$$->appendCode("\t\n\n");
 
 					// $$->setSize(-1);									// TODO: verify 	
 				}
@@ -1293,6 +1406,21 @@ term :	unary_expression	{
 				
 				else
 					$$->setTypeSpecifier($1->getTypeSpecifier());
+
+				//**asm**//
+				string temp = newTemp();
+				data_list.push_back(temp + " dw ?");				// Pushing the new temp variable in data segment
+				$$->setAddress(temp);
+
+				$$->appendCode($1->getCode());
+				$$->appendCode($3->getCode());
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");		// mov ax, a1
+				$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");		// mov bx, b1
+				$$->appendCode("\txor dx, dx\n");								// xor dx, dx
+				$$->appendCode("\tdiv bx\n");									// div bx
+				$$->appendCode("\tmov " + temp + ", ax\t");					// mov t0, ax		// QUOTIENT is in ax
+				$$->appendCode("\t; line no. " + to_string(line_count));
+				$$->appendCode("\t\n\n");
 			}
 			
 			else																			// multiplication operator
@@ -1310,11 +1438,11 @@ term :	unary_expression	{
 
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
-				$$->appendCode("mov ax, " + $1->getAddress() + "\n");				// mov ax, 1
-				$$->appendCode("mov bx, " + $3->getAddress() + "\n");				// mov bx, 2
-				$$->appendCode("mul bx\n");											// mul bx
-				$$->appendCode("mov " + temp + ", ax\t");							// mov t1, ax
-				$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 1
+				$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");				// mov bx, 2
+				$$->appendCode("\tmul bx\n");											// mul bx
+				$$->appendCode("\tmov " + temp + ", ax\t");							// mov t1, ax
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			
 			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
@@ -1334,8 +1462,7 @@ unary_expression : ADDOP unary_expression  	{
 				error_count++;
 				
 				$$->setTypeSpecifier("int");						// default type	-> int				
-			}
-			
+			}			
 			else
 				$$->setTypeSpecifier($2->getTypeSpecifier());
 		}
@@ -1354,7 +1481,6 @@ unary_expression : ADDOP unary_expression  	{
 				
 				$$->setTypeSpecifier("int");						// default type	-> int				
 			}
-			
 			else
 				$$->setTypeSpecifier($2->getTypeSpecifier());
 		}
@@ -1362,8 +1488,6 @@ unary_expression : ADDOP unary_expression  	{
 		 | factor 	{									
 			cout<<"Line "<<line_count<<": unary_expression : factor"<<endl<<endl;	
 			cout<<$1->getName()<<endl<<endl;
-			
-			//$$->setTypeSpecifier($1->getTypeSpecifier());
 
 			//**asm**//
 			$$->setAddress($1->getAddress());
@@ -1394,7 +1518,6 @@ factor	: variable 	{
 				errorFile<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
-//				$$->setTypeSpecifier("default");					// default -> when error
 				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
 			}
 			else if(temp->getSize() != -2)							// function not defined
@@ -1403,11 +1526,10 @@ factor	: variable 	{
 				errorFile<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
 				error_count++;
 					
-//				$$->setTypeSpecifier("default");					// default -> when error
 				$$->setTypeSpecifier("int");						// default type specifier = int -> when error
 				
 			}
-			else										// function defined
+			else													// function defined
 			{
 				if(temp->getParamListSize() != arg_list.size())				// if arg_list and function param_list no. don't match
 				{
@@ -1415,17 +1537,13 @@ factor	: variable 	{
 					errorFile<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
 					error_count++;
 					
-					$$->setTypeSpecifier("int");				// default -> int
+					$$->setTypeSpecifier("int");							// default -> int
 				}
-				else									// arg_list number matches
+				else														// arg_list number matches
 				{
 					int i = 0;
 					for(i=0; i<arg_list.size(); i++)
 					{
-//						cout<<i<<endl;
-//						cout<<"arg: "<<arg_list[i]<<endl;
-//						cout<<"param: "<<temp->getParameter(i).param_name<<" "<<temp->getParameter(i).param_type<<endl;
-						
 						if(arg_list[i] != temp->getParameter(i).param_type)
 						{
 							cout<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
@@ -1438,17 +1556,55 @@ factor	: variable 	{
 					if(i == arg_list.size())					// arg_list types matches
 					{
 						$$->setTypeSpecifier(temp->getTypeSpecifier());
+
+						//**asm**//
+						string tempVar = newTemp();
+						data_list.push_back(tempVar + " dw ?");
+
+						$$->appendCode($3->getCode());
+
+						for(int i=0; i<tempCount-1; i++)
+						{
+							$$->appendCode("\tpush t" + to_string(i) + "\n");						// pushing all the previous temp registers
+						}
+						for(int i=0; i< asmVariables.size(); i++)
+						{
+							$$->appendCode("\tpush " + asmVariables[i] + "\n");					// pushing all the variables to stack
+						}
+
+						for(int i=0; i<tempArgAddress.size(); i++)
+						{
+							$$->appendCode("\tmov ax, " + tempArgAddress[i] + "\n");				// mov ax, a3		// a3 from main
+							$$->appendCode("\tmov " + temp->getFuncArgsAddress(i) + ", ax\n");	// mov a1, ax		// a1 from callee function
+						}
+						$$->appendCode("\tcall " + $1->getName() + "_proc\n");					// call f_proc
+						$$->appendCode("\tmov ax, ret_temp\n");									// mov ax, ret_temp
+						$$->appendCode("\tmov " + tempVar + ", ax\n");							// mov t2, ax
+
+						for(int i=asmVariables.size()-1; i>-1; i--)
+						{
+							$$->appendCode("\tpop " + asmVariables[i] + "\n");					// popping the asm variables
+						}
+						for(int i=tempCount-2; i>-1; i--)
+						{
+							$$->appendCode("\tpop t" + to_string(i) + "\n");						// pop all the temp registers
+						}
+
+						$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+
+						$$->setAddress(tempVar);
 					}
 					else
 					{
 						$$->setTypeSpecifier("int");				// default -> int
 					}
 				}
-//				$$->setTypeSpecifier(temp->getTypeSpecifier());
 			}	
 				
 			cout<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
 			arg_list.clear();
+			
+			tempArgAddress.clear();
 			}
 												
 			
@@ -1502,18 +1658,18 @@ factor	: variable 	{
 			if($1->getSize() < 0)
 			{
 				$$->appendCode($1->getCode());
-				$$->appendCode("mov ax," + $1->getAddress() + "\n");		// mov ax, c1
-				$$->appendCode("mov " + temp + ", ax\n");					// mov t5, ax
-				$$->appendCode("inc " + $1->getAddress() + "\t");			// inc c1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");		// mov ax, c1
+				$$->appendCode("\tmov " + temp + ", ax\n");					// mov t5, ax
+				$$->appendCode("\tinc " + $1->getAddress() + "\t");			// inc c1
 			}
 			else  													// array
 			{
 				$$->appendCode($1->getCode());
-				$$->appendCode("mov ax," + $1->getAddress() + "[di]\n");		// mov ax, c1[di]
-				$$->appendCode("mov " + temp + ", ax\n");						// mov t5, ax
-				$$->appendCode("inc " + $1->getAddress() + "[di]\t");			// inc c1[di]
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "[di]\n");		// mov ax, c1[di]
+				$$->appendCode("\tmov " + temp + ", ax\n");						// mov t5, ax
+				$$->appendCode("\tinc " + $1->getAddress() + "[di]\t");			// inc c1[di]
 			}
-			$$->appendCode("; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			$$->setAddress(temp);
 		}
 			
@@ -1524,6 +1680,27 @@ factor	: variable 	{
 			cout<<$1->getName()<<"--"<<endl<<endl;
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());
+
+			//**asm**//
+			string temp = newTemp();
+			data_list.push_back(temp + " dw ?");					// Pushing the new temp variable in data segment
+
+			if($1->getSize() < 0)
+			{
+				$$->appendCode($1->getCode());
+				$$->appendCode("\tmov ax," + $1->getAddress() + "\n");		// mov ax, c1
+				$$->appendCode("\tmov " + temp + ", ax\n");					// mov t5, ax
+				$$->appendCode("\tdec " + $1->getAddress() + "\t");			// inc c1
+			}
+			else  													// array
+			{
+				$$->appendCode($1->getCode());
+				$$->appendCode("\tmov ax," + $1->getAddress() + "[di]\n");		// mov ax, c1[di]
+				$$->appendCode("\tmov " + temp + ", ax\n");						// mov t5, ax
+				$$->appendCode("\tdec " + $1->getAddress() + "[di]\t");			// inc c1[di]
+			}
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			$$->setAddress(temp);
 			}
 	;
 	
@@ -1555,6 +1732,10 @@ arguments : arguments COMMA logic_expression	{
 			}
 			else
 				arg_list.push_back($3->getTypeSpecifier());
+
+			//**asm**//
+			tempArgAddress.push_back($3->getAddress());
+
 		}
 			
 	      | logic_expression	{
@@ -1573,6 +1754,9 @@ arguments : arguments COMMA logic_expression	{
 			}
 			else
 				arg_list.push_back($1->getTypeSpecifier());
+
+			//**asm**//
+			tempArgAddress.push_back($1->getAddress());
 		}
 	      ;
  
