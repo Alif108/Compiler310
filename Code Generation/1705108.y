@@ -115,12 +115,110 @@ string makeAsmVariableDeclaration(string name, int size)
 
 void yyerror(char *s)
 {
-	cout<<"Error at line "<<line_count<<": "<<s<<endl<<endl;
+	logFile<<"Error at line "<<line_count<<": "<<s<<endl<<endl;
 	error_count++;
 	
 	return;
 }
 
+string optimize_code(string code)
+{
+	string temp1, temp2, temp3;
+    stringstream ss(code);
+    string temp_line = "";
+    string opt_code = "";
+    string temp_opt_code = "";
+    string temp_token;
+    vector<string>lines;
+    vector<string>temp_lines;
+    vector<string> tokens1, tokens2;
+
+    while(getline(ss, temp1, '\n'))								// taking each line 
+    {
+    	stringstream temp_stream1(temp1);
+        getline(temp_stream1, temp2, ';');						// trimming all the comments
+
+        // temp_opt_code += temp2 ;									// temp2 contains a single line of asm code
+
+        temp_lines.push_back(temp2);									// lines contains all the lines of asm code
+    }
+
+    for(int i=0; i<temp_lines.size(); i++)
+    {
+    	if(temp_lines[i] != "")
+    		lines.push_back(temp_lines[i]);
+    }
+
+    temp_lines.clear();
+
+    for(int i=0; i<lines.size()-1; i++)
+    {
+    	stringstream line1_stream(lines[i]);					// taking a line
+    	stringstream line2_stream(lines[i+1]);				// taking the next line
+
+    	while(getline(line1_stream, temp_token, ' '))			
+    		tokens1.push_back(temp_token);						// pushing each word of line 1
+
+    	while(getline(line2_stream, temp_token, ' '))			
+    		tokens2.push_back(temp_token);						// pushing each word of line 2
+
+    	// cout<<"line_i: "<<lines[i]<<endl;
+    	// cout<<"line_i+1: "<<lines[i+1]<<endl<<endl;
+
+    	// cout<<"line_i: "<<(tokens1[0]=="mov")<<endl;
+    	// cout<<"line_i+1: "<<tokens2[0]<<endl<<endl;
+
+    	// if(lines[i] == "")
+    	// 	cout<<"here\n";
+
+    	if((tokens1[0].substr(1,3) == "mov") && (tokens2[0].substr(1,3) == "mov"))
+    	{
+    		// cout<<"here"<<endl;
+    		// e.g. mov t1, ax ; mov ax, t1
+    		// t1 <-> t1 && ax  <-> ax
+    		// cout<<(tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2])<<endl;
+
+    		cout<<(tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2].substr(0,2))<<endl;
+    		cout<<(tokens2[1].substr(0, tokens2[1].length()-1)==tokens1[2].substr(0,2))<<endl;
+    		// cout<<<<endl<<endl;
+
+    		// cout<<tokens1[1].substr(0, tokens1[1].length()-1)<<endl;
+    		// cout<<tokens2[2].substr(0,2)<<endl;
+    		// cout<<tokens2[1].substr(0, tokens2[1].length()-1)<<endl;
+    		// cout<<tokens1[2].substr(0,2)<<endl<<endl;
+
+
+    		if((tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2].substr(0,2)) && (tokens2[1].substr(0, tokens2[1].length()-1)==tokens1[2].substr(0,2)))
+    		{
+    			cout<<"here"<<endl;
+    			opt_code += lines[i] + "\n";
+    			i++;											// skipping the next line
+    		}
+    		else
+    		{
+    			opt_code += lines[i] + "\n";
+    		}
+    	}
+    	else
+    	{
+    		opt_code += lines[i] + "\n";
+    	}
+    	tokens1.clear();
+    	tokens2.clear();
+    }
+	opt_code += lines[lines.size()-1];
+
+    // 	for(int i=0; i<token1.size(); i++)
+    // 		cout<<token1[i]<<" ";
+
+    // 	cout<<opt_code;
+
+    // 	tokens1.clear();
+    // 	tokens2.clear();
+    // 	// cout<<endl;
+   	// }
+	return opt_code;
+}
 
 %}
 
@@ -156,10 +254,12 @@ void yyerror(char *s)
 
 start : program
 	{
-		cout<<"Line "<<line_count<<": start : program"<<endl<<endl;
+		logFile<<"Line "<<line_count<<": start : program"<<endl<<endl;
 
 		if(!error_count)
 		{
+			string opt_code;
+
 			string label1 = newLabel();
 			string label2 = newLabel();
 			// string exitLabel = newLabel();
@@ -251,14 +351,16 @@ start : program
 			assembly_code += "END MAIN\n";										// end segment
 
 			code<<assembly_code;												//writing to assembly code file
+			opt_code = optimize_code(assembly_code);
+			optimized_code<<opt_code;											// writing to optimized code file
 		}	
 	}
 	;
 
 program : program unit {
 			$$ = new SymbolInfo(($1->getName() + "\n" + $2->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": program : program unit"<<endl<<endl;	
-			cout<<$1->getName()<<"\n"<<$2->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": program : program unit"<<endl<<endl;	
+			logFile<<$1->getName()<<"\n"<<$2->getName()<<endl<<endl;
 
 			//*asm**//
 			$$->appendCode($1->getCode());
@@ -266,33 +368,33 @@ program : program unit {
 			}
 			
 	| unit	{
-			cout<<"Line "<<line_count<<": program : unit"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": program : unit"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 	;
 	
 unit : var_declaration	{
 
-			cout<<"Line "<<line_count<<": unit : var_declaration"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unit : var_declaration"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
     	| func_declaration	{
 
-			cout<<"Line "<<line_count<<": unit : func_declaration"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unit : func_declaration"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 	| func_definition	{
 
-			cout<<"Line "<<line_count<<": unit : func_definition"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unit : func_definition"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
      ;
      
 func_declaration : type_specifier id update_func_info LPAREN parameter_list RPAREN insert_func_dec_info SEMICOLON	{
 		
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "(" + $5->getName() + ");"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON"<<endl<<endl;
-			cout<<$1->getName()<<" "<<$2->getName()<<"("<<$5->getName()<<");"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON"<<endl<<endl;
+			logFile<<$1->getName()<<" "<<$2->getName()<<"("<<$5->getName()<<");"<<endl<<endl;
 			
 //			func_info.push_back(make_pair($1->getName(), $2->getName()));
 		}
@@ -300,8 +402,8 @@ func_declaration : type_specifier id update_func_info LPAREN parameter_list RPAR
 		| type_specifier id update_func_info LPAREN RPAREN insert_func_dec_info SEMICOLON	{
 		
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "();"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON"<<endl<<endl;
-			cout<<$1->getName()<<" "<<$2->getName()<<"();"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON"<<endl<<endl;
+			logFile<<$1->getName()<<" "<<$2->getName()<<"();"<<endl<<endl;
 			
 //			func_info.push_back(make_pair($1->getName(), $2->getName()));
 		}
@@ -311,8 +413,8 @@ func_declaration : type_specifier id update_func_info LPAREN parameter_list RPAR
 func_definition : type_specifier id update_func_info LPAREN parameter_list RPAREN insert_func_def_info compound_statement	{
 
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "(" + $5->getName() + ")" + $8->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement"<<endl<<endl;	
-			cout<<$1->getName()<<" "<<$2->getName()<<"("<<$5->getName()<<")"<<$8->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement"<<endl<<endl;	
+			logFile<<$1->getName()<<" "<<$2->getName()<<"("<<$5->getName()<<")"<<$8->getName()<<endl<<endl;
 
 			//**asm**//
 			$$->appendCode($2->getName() + "_proc PROC\n");			// making function name // e.g. f_proc
@@ -329,8 +431,8 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 		| type_specifier id update_func_info LPAREN RPAREN insert_func_def_info compound_statement		{
 
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "(" + ")" + $7->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": func_definition : type_specifier ID LPAREN RPAREN compound_statement"<<endl<<endl;	
-			cout<<$1->getName()<<" "<<$2->getName()<<"("<<")"<<$7->getName()<<endl<<endl; 
+			logFile<<"Line "<<line_count<<": func_definition : type_specifier ID LPAREN RPAREN compound_statement"<<endl<<endl;	
+			logFile<<$1->getName()<<" "<<$2->getName()<<"("<<")"<<$7->getName()<<endl<<endl; 
 
 			//**asm**//
 			if($2->getName() == "main")									// if main function
@@ -382,12 +484,12 @@ insert_func_def_info 	: 	{
 							si->addParameter(param_list[i].param_type, param_list[i].param_name);
 						}
 
-						// cout<<argumentAddressList.size()<<endl;
+						// logFile<<argumentAddressList.size()<<endl;
 						for(int i=0; i<argumentAddressList.size(); i++)
 						{
 							si->pushFuncArgsAddress(argumentAddressList[i]);
 						}						
-						// cout<<si->getName()<<" "<<si->getFuncArgsAddressSize()<<endl;
+						// logFile<<si->getName()<<" "<<si->getFuncArgsAddressSize()<<endl;
 						st.Insert(*si);
 
 						//NOTICE//
@@ -399,14 +501,14 @@ insert_func_def_info 	: 	{
 					{
 						if(return_type != temp->getTypeSpecifier())							// return types don't match
 						{
-							cout<<"Error at line "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
+							logFile<<"Error at line "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
 							errorFile<<"Error at line "<<line_count<<": Return type mismatch with function declaration in function "<<func_name<<endl<<endl;
 							error_count++;
 						}
 						
 						else if(param_list.size() != temp->getParamListSize())				// parameter list sizes don't match
 						{
-							cout<<"Error at line "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
+							logFile<<"Error at line "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
 							errorFile<<"Error at line "<<line_count<<": Total number of arguments mismatch with declaration in function "<<func_name<<endl<<endl;
 							error_count++;
 						}
@@ -419,7 +521,7 @@ insert_func_def_info 	: 	{
 							{
 								if(param_list[i].param_type != temp->getParameter(i).param_type)	// if one doesn't match
 								{
-									cout<<"Error at line "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
+									logFile<<"Error at line "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
 									errorFile<<"Error at line "<<line_count<<": inconsistent function definition with its declaration for "<<func_name<<endl<<endl;
 									error_count++;
 									break;
@@ -435,7 +537,7 @@ insert_func_def_info 	: 	{
 					
 					else																	// id with same name found
 					{
-						cout<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
+						logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						error_count++;
 					}
@@ -467,7 +569,7 @@ insert_func_dec_info 	: 	{
 					}
 					else									// some other id with the same name is found
 					{
-						cout<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
+						logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<func_name<<endl<<endl;
 						error_count++;
 					}
@@ -477,11 +579,11 @@ insert_func_dec_info 	: 	{
 parameter_list  : parameter_list COMMA type_specifier id	{
 		
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName() + " " + $4->getName()), "NON_TERMINAL");
- 			cout<<"Line "<<line_count<<": parameter_list : parameter_list COMMA type_specifier ID"<<endl<<endl;	
+ 			logFile<<"Line "<<line_count<<": parameter_list : parameter_list COMMA type_specifier ID"<<endl<<endl;	
  			
  			if(searchParamList($4->getName()))					// checking multiple declaration of parameters
  			{
- 				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in parameter"<<endl<<endl;
+ 				logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in parameter"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$4->getName()<<" in parameter"<<endl<<endl;
 				error_count++;
  			}
@@ -491,14 +593,14 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  				argumentAddressList.push_back(($4->getName() + to_string(scopeCount+1)));		// NOTICE
  			}
  				
- 			cout<<$1->getName()<<", "<<$3->getName()<<" "<<$4->getName()<<endl<<endl;
+ 			logFile<<$1->getName()<<", "<<$3->getName()<<" "<<$4->getName()<<endl<<endl;
 		}
 		
 		| parameter_list COMMA type_specifier	{
 		
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName()), "NON_TERMINAL");
- 			cout<<"Line "<<line_count<<": parameter_list : parameter_list COMMA type_specifier"<<endl<<endl;	
- 			cout<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
+ 			logFile<<"Line "<<line_count<<": parameter_list : parameter_list COMMA type_specifier"<<endl<<endl;	
+ 			logFile<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
  			
  			param_list.push_back({$3->getName(), ""});	
 		}
@@ -506,8 +608,8 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  		| type_specifier id	{
  			
  			$$ = new SymbolInfo(($1->getName() + " " + $2->getName()), "NON_TERMINAL");
- 			cout<<"Line "<<line_count<<": parameter_list  : type_specifier ID"<<endl<<endl;	
- 			cout<<$1->getName()<<" "<<$2->getName()<<endl<<endl;
+ 			logFile<<"Line "<<line_count<<": parameter_list  : type_specifier ID"<<endl<<endl;	
+ 			logFile<<$1->getName()<<" "<<$2->getName()<<endl<<endl;
  			
  			param_list.push_back({$1->getName(), $2->getName()});
  			argumentAddressList.push_back(($2->getName() + to_string(scopeCount+1)));		// NOTICE
@@ -515,8 +617,8 @@ parameter_list  : parameter_list COMMA type_specifier id	{
  		
 		| type_specifier	{
 		
-			cout<<"Line "<<line_count<<": parameter_list : type_specifier"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": parameter_list : type_specifier"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 			param_list.push_back({$1->getName(), ""});
 		}
@@ -546,8 +648,8 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 		} statements RCURL	{
 
 			$$ = new SymbolInfo(("{\n" + $3->getName() + "\n}"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": compound_statement : LCURL statements RCURL"<<endl<<endl;	
-			cout<<"{\n"<<$3->getName()<<"\n}"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": compound_statement : LCURL statements RCURL"<<endl<<endl;	
+			logFile<<"{\n"<<$3->getName()<<"\n}"<<endl<<endl;
 			
 			st.printAllScopeTable(logFile);
 			st.ExitScope();
@@ -581,8 +683,8 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 		} RCURL	{
 
 			$$ = new SymbolInfo(((string)"{\n" + (string)"\n}"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": compound_statement : LCURL RCURL"<<endl<<endl;	
-			cout<<"{\n"<<"\n}"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": compound_statement : LCURL RCURL"<<endl<<endl;	
+			logFile<<"{\n"<<"\n}"<<endl<<endl;
 			
 			st.printAllScopeTable(logFile);
 			st.ExitScope();
@@ -592,11 +694,11 @@ compound_statement : LCURL {										// enter new scope while encountering "{"
 var_declaration : type_specifier declaration_list SEMICOLON	{
 
 				$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + ";"), "NON_TERMINAL");
-				cout<<"Line "<<line_count<<": var_declaration : type_specifier declaration_list SEMICOLON"<<endl<<endl;
+				logFile<<"Line "<<line_count<<": var_declaration : type_specifier declaration_list SEMICOLON"<<endl<<endl;
 				
 				if($1->getName() == "void")								// e.g.		void x, y, z;
 				{
-					cout<<"Error at line "<<line_count<<": Variable type cannot be void"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Variable type cannot be void"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Variable type cannot be void"<<endl<<endl;
 					error_count++;
 				}
@@ -615,7 +717,7 @@ var_declaration : type_specifier declaration_list SEMICOLON	{
 						data_list.push_back(makeAsmVariableDeclaration(variable_list[i].var_name, variable_list[i].var_size));
 					}
 				}
-				cout<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
+				logFile<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
 				
 //				st.printAllScopeTable(logFile);
 				variable_list.clear();							// emptying the variable_list container after inserting
@@ -623,22 +725,22 @@ var_declaration : type_specifier declaration_list SEMICOLON	{
  		 ;
  		 
 type_specifier	: INT	{	$$ = new SymbolInfo($1->getName(), "NON_TERMINAL");
-				cout<<"Line "<<line_count<<": type_specifier : INT"<<endl<<endl;	
-				cout<<"int"<<endl<<endl;		
+				logFile<<"Line "<<line_count<<": type_specifier : INT"<<endl<<endl;	
+				logFile<<"int"<<endl<<endl;		
 				
 				type = "int";
 			}
 				
  		| FLOAT	{	$$ = new SymbolInfo($1->getName(), "NON_TERMINAL");
-				cout<<"Line "<<line_count<<": type_specifier : FLOAT"<<endl<<endl;	
-				cout<<"float"<<endl<<endl;
+				logFile<<"Line "<<line_count<<": type_specifier : FLOAT"<<endl<<endl;	
+				logFile<<"float"<<endl<<endl;
 				
 				type = "float";		
 			}
 				
  		| VOID	{	$$ = new SymbolInfo($1->getName(), "NON_TERMINAL");
-				cout<<"Line "<<line_count<<": type_specifier : VOID"<<endl<<endl;	
-				cout<<"void"<<endl<<endl;		
+				logFile<<"Line "<<line_count<<": type_specifier : VOID"<<endl<<endl;	
+				logFile<<"void"<<endl<<endl;		
 				
 				type = "void";	
 			}
@@ -650,7 +752,7 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp!=NULL)													// found in the SymbolTable
 			{
-				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
@@ -659,8 +761,8 @@ declaration_list : declaration_list COMMA id	{
 				variable_list.push_back({"int", $3->getName(), -1});			// default var_type "int", var_size -1
 			
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": declaration_list : declaration_list COMMA ID"<<endl<<endl;
-			cout<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": declaration_list : declaration_list COMMA ID"<<endl<<endl;
+			logFile<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
 		}
 		
  		  | declaration_list COMMA id LTHIRD CONST_INT RTHIRD	{				// array
@@ -669,7 +771,7 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp != NULL)													// found in the SymbolTable
 			{
-				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$3->getName()<<endl<<endl;
 				error_count++;
 			}
@@ -677,8 +779,8 @@ declaration_list : declaration_list COMMA id	{
  		  		variable_list.push_back({"int", $3->getName(), stoi($5->getName())});	// default var_type "int", array size taken from $5
  		  	
  		  	$$ = new SymbolInfo(($1->getName() + ", " + $3->getName() + "[" + $5->getName() + "]"), "NON_TERMINAL");
- 		  	cout<<"Line "<<line_count<<": declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD"<<endl<<endl;
- 		  	cout<<$1->getName()<<", "<<$3->getName()<<"[" + $5->getName()<<"]"<<endl<<endl;
+ 		  	logFile<<"Line "<<line_count<<": declaration_list : declaration_list COMMA ID LTHIRD CONST_INT RTHIRD"<<endl<<endl;
+ 		  	logFile<<$1->getName()<<", "<<$3->getName()<<"[" + $5->getName()<<"]"<<endl<<endl;
  		  	
  		  	
  		}
@@ -689,7 +791,7 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp != NULL)								// found in the SymbolTable
 			{
-				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
@@ -697,8 +799,8 @@ declaration_list : declaration_list COMMA id	{
 			else
 				variable_list.push_back({"int", $1->getName(), -1});			// default var_type "int", var_size -1
 				
-			cout<<"Line "<<line_count<<": declaration_list : ID"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": declaration_list : ID"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
  		  | id LTHIRD CONST_INT RTHIRD	{							// array  		e.g. (int) a[7]
@@ -707,7 +809,7 @@ declaration_list : declaration_list COMMA id	{
 			
 			if(temp!=NULL)									// found in the SymbolTable
 			{
-				cout<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Multiple declaration of "<<$1->getName()<<endl<<endl;
 				error_count++;
 			}
@@ -715,8 +817,8 @@ declaration_list : declaration_list COMMA id	{
  		  		variable_list.push_back({"int", $1->getName(), stoi($3->getName())});	// default var_type "int", array size taken from $3
  		  	
  		  	$$ = new SymbolInfo(($1->getName() + "[" + $3->getName() + "]"), "NON_TERMINAL");
- 		  	cout<<"Line "<<line_count<<": declaration_list : ID LTHIRD CONST_INT RTHIRD"<<endl<<endl;
- 		  	cout<<$1->getName()<<"[" + $3->getName()<<"]"<<endl<<endl;
+ 		  	logFile<<"Line "<<line_count<<": declaration_list : ID LTHIRD CONST_INT RTHIRD"<<endl<<endl;
+ 		  	logFile<<$1->getName()<<"[" + $3->getName()<<"]"<<endl<<endl;
  		}
  		  ;
  		  
@@ -729,15 +831,15 @@ id	:	ID {
  		  
 statements : statement	{
 
-			cout<<"Line "<<line_count<<": statements : statement"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statements : statement"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 	   | statements statement	{
 
 			$$ = new SymbolInfo(($1->getName() + "\n" + $2->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statements : statements statement"<<endl<<endl;	
-			cout<<$1->getName()<<"\n"<<$2->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statements : statements statement"<<endl<<endl;	
+			logFile<<$1->getName()<<"\n"<<$2->getName()<<endl<<endl;
 
 			//**asm**//
 			$$->appendCode($1->getCode());
@@ -747,27 +849,27 @@ statements : statement	{
 	   
 statement : var_declaration	{
 
-			cout<<"Line "<<line_count<<": statement : var_declaration"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : var_declaration"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 	  | expression_statement	{
 	  
-			cout<<"Line "<<line_count<<": statement : expression_statement"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : expression_statement"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 	  | compound_statement		{
 	  
-			cout<<"Line "<<line_count<<": statement : compound_statement"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : compound_statement"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 	  | FOR LPAREN expression_statement expression_statement expression RPAREN statement	{
 	  
 	  		$$ = new SymbolInfo(("for(" + $3->getName() + $4->getName() + $5->getName() + ")" + $7->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : FOR LPAREN expression_statement expression_statement expression RPAREN 			statement"<<endl<<endl;	
-			cout<<"for("<<$3->getName()<<$4->getName()<<$5->getName()<<")"<<$7->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : FOR LPAREN expression_statement expression_statement expression RPAREN 			statement"<<endl<<endl;	
+			logFile<<"for("<<$3->getName()<<$4->getName()<<$5->getName()<<")"<<$7->getName()<<endl<<endl;
 
 			//**asm**//
 			if($3->getName() != ";" && $4->getName() != ";")					// if not "for( ; ; )"
@@ -796,8 +898,8 @@ statement : var_declaration	{
 	  | IF LPAREN expression RPAREN statement	%prec LOWER_THAN_ELSE	{
 	  
 	  		$$ = new SymbolInfo(("if(" + $3->getName() + ")" + $5->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : IF LPAREN expression RPAREN statement"<<endl<<endl;	
-			cout<<"if("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : IF LPAREN expression RPAREN statement"<<endl<<endl;	
+			logFile<<"if("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
 
 			//**asm**//
 			string label = newLabel();
@@ -814,8 +916,8 @@ statement : var_declaration	{
 	  | IF LPAREN expression RPAREN statement ELSE statement	{
 	  
 	  		$$ = new SymbolInfo(("if(" + $3->getName() + ")" + $5->getName() + "\nelse\n" + $7->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : IF LPAREN expression RPAREN statement ELSE statement"<<endl<<endl;	
-			cout<<"if("<<$3->getName()<<")"<<$5->getName()<<"\nelse\n"<<$7->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : IF LPAREN expression RPAREN statement ELSE statement"<<endl<<endl;	
+			logFile<<"if("<<$3->getName()<<")"<<$5->getName()<<"\nelse\n"<<$7->getName()<<endl<<endl;
 
 			//**asm**//
 			string label1 = newLabel();
@@ -836,8 +938,8 @@ statement : var_declaration	{
 	  | WHILE LPAREN expression RPAREN statement	{
 	  
 	  		$$ = new SymbolInfo(("while(" + $3->getName() + ")" + $5->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : WHILE LPAREN expression RPAREN statement"<<endl<<endl;	
-			cout<<"while("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : WHILE LPAREN expression RPAREN statement"<<endl<<endl;	
+			logFile<<"while("<<$3->getName()<<")"<<$5->getName()<<endl<<endl;
 
 			//**asm**//
 			string label1 = newLabel();
@@ -858,13 +960,13 @@ statement : var_declaration	{
 	  | PRINTLN LPAREN id RPAREN SEMICOLON		{
 	  
 	  		$$ = new SymbolInfo(("printf(" + $3->getName() + ");" + "\n"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : PRINTLN LPAREN ID RPAREN SEMICOLON"<<endl<<endl;
 			
 			SymbolInfo * temp = st.LookupHere($3->getName());
 			
 			if(temp == NULL)
 			{
-				cout<<"Error at line "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Undeclared variable "<<$3->getName()<<endl<<endl;
 				error_count++;
 			}
@@ -879,15 +981,15 @@ statement : var_declaration	{
 				$$->appendCode("\t\n\n");
 			}
 
-			cout<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
+			logFile<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
 
 		}
 		
 	  | RETURN expression SEMICOLON		{
 	  
 	  		$$ = new SymbolInfo(("return " + $2->getName() + ";"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": statement : RETURN expression SEMICOLON"<<endl<<endl;	
-			cout<<"return "<<$2->getName()<<";"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": statement : RETURN expression SEMICOLON"<<endl<<endl;	
+			logFile<<"return "<<$2->getName()<<";"<<endl<<endl;
 
 			//**asm**//
 			if(!is_main)
@@ -911,14 +1013,14 @@ statement : var_declaration	{
 expression_statement 	: SEMICOLON	{
 
 			$$ = new SymbolInfo(";", "SEMICOLON");
-			cout<<"Line "<<line_count<<": expression_statement : SEMICOLON"<<endl<<endl;	
-			cout<<";"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": expression_statement : SEMICOLON"<<endl<<endl;	
+			logFile<<";"<<endl<<endl;
 		}		
 			| expression SEMICOLON 		{
 
 			$$ = new SymbolInfo(($1->getName() + ";"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": expression_statement : expression SEMICOLON"<<endl<<endl;	
-			cout<<$1->getName()<<";"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": expression_statement : expression SEMICOLON"<<endl<<endl;	
+			logFile<<$1->getName()<<";"<<endl<<endl;
 
 			//**asm**//
 			$$->appendCode($1->getCode());
@@ -927,13 +1029,13 @@ expression_statement 	: SEMICOLON	{
 			;
 	  
 variable : id 	{
-			cout<<"Line "<<line_count<<": variable : ID"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": variable : ID"<<endl<<endl;
 			
 			SymbolInfo* temp = st.Lookup($1->getName());					// searching it in the SymbolTable		
 			
 			if(temp == NULL)												// if not declared previously
 			{
-				cout<<"Error at line "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Undeclared variable "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
@@ -943,8 +1045,8 @@ variable : id 	{
 			
 			else if(temp->getSize() > 0)							//  {id} is an array
 			{
-				//cout<<temp->getSize()<<endl;
-				cout<<"Error at line "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
+				//logFile<<temp->getSize()<<endl;
+				logFile<<"Error at line "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Type mismatch, "<<$1->getName()<<" is an array"<<endl<<endl;
 				error_count++;
 				
@@ -960,19 +1062,19 @@ variable : id 	{
 				//**asm**//
 				$$->setAddress(temp->getAddress());						// setting up the assembly code symbol				
 			}	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<$1->getName()<<endl<<endl;
 		}	
 		
 	 | id LTHIRD expression RTHIRD {								// array index
 	 		
 	 		$$ = new SymbolInfo(($1->getName() + "[" + $3->getName() + "]"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": variable : ID LTHIRD expression RTHIRD"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": variable : ID LTHIRD expression RTHIRD"<<endl<<endl;
 			
 			SymbolInfo* temp = st.Lookup($1->getName());					// searching in all the ScopeTables
 			
 			if(temp == NULL)								// if not declared previously
 			{
-				cout<<"Error at line "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Undeclared variable"<<$1->getName()<<endl<<endl;
 				error_count++;
 				
@@ -984,7 +1086,7 @@ variable : id 	{
 			{
 				if(temp->getSize() < 0)							// not an array
 				{
-					cout<<"Error at line "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": "<<$1->getName()<<" is not an array"<<endl<<endl;
 					error_count++;
 					
@@ -994,7 +1096,7 @@ variable : id 	{
 			
 				else if($3->getTypeSpecifier() != "int")				// index is not an integer
 				{
-					cout<<"Error at line "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Expression inside third brackets not an integer"<<endl<<endl;
 					error_count++;
 					
@@ -1016,14 +1118,14 @@ variable : id 	{
 			
 			}
 			
-			cout<<$1->getName()<<"["<<$3->getName()<<"]"<<endl<<endl;
+			logFile<<$1->getName()<<"["<<$3->getName()<<"]"<<endl<<endl;
 		}
 	 ;
 	 
 expression : logic_expression		{
 
-			cout<<"Line "<<line_count<<": expression : logic_expression "<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": expression : logic_expression "<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 //			$$->setTypeSpecifier($1->getTypeSpecifier());
 			type = $1->getTypeSpecifier();
@@ -1032,11 +1134,11 @@ expression : logic_expression		{
 	   | variable ASSIGNOP logic_expression		{
 			
 			$$ = new SymbolInfo(($1->getName() + "=" + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": expression : variable ASSIGNOP logic_expression "<<endl<<endl;
+			logFile<<"Line "<<line_count<<": expression : variable ASSIGNOP logic_expression "<<endl<<endl;
 
 			if($3->getTypeSpecifier() == "void")						// e.g.	(int) x = foo();	where foo() is void
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1052,7 +1154,7 @@ expression : logic_expression		{
 				
 				else
 				{
-					cout<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Type Mismatch"<<endl<<endl;
 					error_count++;
 						
@@ -1114,25 +1216,25 @@ expression : logic_expression		{
 					$$->setAddress($1->getAddress());
 				}
 			}
-			cout<<$1->getName()<<" = "<<$3->getName()<<endl<<endl;	
+			logFile<<$1->getName()<<" = "<<$3->getName()<<endl<<endl;	
 		}	 
 	   ;
 			
 logic_expression : rel_expression 	{								
 
-			cout<<"Line "<<line_count<<": logic_expression : rel_expression "<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": logic_expression : rel_expression "<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 		| rel_expression LOGICOP rel_expression		{					
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": logic_expression : rel_expression LOGICOP rel_expression "<<endl<<endl;	
-			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": logic_expression : rel_expression LOGICOP rel_expression "<<endl<<endl;	
+			logFile<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
 			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo()||x;	where foo() is void
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;						
 			}
@@ -1181,19 +1283,19 @@ logic_expression : rel_expression 	{
 			
 rel_expression	: simple_expression 	{								
 
-			cout<<"Line "<<line_count<<": rel_expression : simple_expression "<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": rel_expression : simple_expression "<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 		
 		| simple_expression RELOP simple_expression	{					
 
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": rel_expression : simple_expression RELOP simple_expression "<<endl<<endl;	
-			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": rel_expression : simple_expression RELOP simple_expression "<<endl<<endl;	
+			logFile<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
 			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo() < x;	where foo() is void
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 			}
@@ -1284,19 +1386,19 @@ rel_expression	: simple_expression 	{
 				
 simple_expression : term 	{
 
-			cout<<"Line "<<line_count<<": simple_expression : term "<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": simple_expression : term "<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 		}
 				
 		  | simple_expression ADDOP term 	{						
 		  
 		  	$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
-		  	cout<<"Line "<<line_count<<": simple_expression : simple_expression ADDOP term  "<<endl<<endl;	
-			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
+		  	logFile<<"Line "<<line_count<<": simple_expression : simple_expression ADDOP term  "<<endl<<endl;	
+			logFile<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 			
 			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")	// e.g.	foo() + x;	where foo() is void
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1330,8 +1432,8 @@ simple_expression : term 	{
 					
 term :	unary_expression	{
 			
-			cout<<"Line "<<line_count<<": term : unary_expression"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": term : unary_expression"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 
@@ -1342,11 +1444,11 @@ term :	unary_expression	{
 	|  term MULOP unary_expression		{									
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName() + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": term : term MULOP unary_expression"<<endl<<endl;	
+			logFile<<"Line "<<line_count<<": term : term MULOP unary_expression"<<endl<<endl;	
 			
 			if($1->getTypeSpecifier() == "void" || $3->getTypeSpecifier() == "void")		// e.g.	foo() * x;	where foo() is void
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1357,14 +1459,14 @@ term :	unary_expression	{
 			{
 				if($1->getTypeSpecifier() != "int" || $3->getTypeSpecifier() != "int")		// if any of the operands are not "int"
 				{
-					cout<<"Error at line "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Non-Integer operand on modulus operator"<<endl<<endl;
 					error_count++;
 				}
 				
 				if($3->getName() == "0")								// if mod by 0
 				{
-					cout<<"Error at line "<<line_count<<": Modulus by Zero"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Modulus by Zero"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Modulus by Zero"<<endl<<endl;
 					error_count++;
 				}
@@ -1394,7 +1496,7 @@ term :	unary_expression	{
 			{
 				if($3->getName() == "0")								// if div by 0
 				{
-					cout<<"Error at line "<<line_count<<": Divide by Zero"<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Divide by Zero"<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Divide by Zero"<<endl<<endl;
 					error_count++;
 					
@@ -1445,19 +1547,19 @@ term :	unary_expression	{
 				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
 			}
 			
-			cout<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
+			logFile<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
 }
      ;
 
 unary_expression : ADDOP unary_expression  	{							
 			
 			$$ = new SymbolInfo(($1->getName() + $2->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": unary_expression : ADDOP unary_expression"<<endl<<endl;	
-			cout<<$1->getName()<<$2->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unary_expression : ADDOP unary_expression"<<endl<<endl;	
+			logFile<<$1->getName()<<$2->getName()<<endl<<endl;
 			
 			if($2->getTypeSpecifier() == "void")						
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1470,12 +1572,12 @@ unary_expression : ADDOP unary_expression  	{
 		 | NOT unary_expression 	{							
 			
 			$$ = new SymbolInfo(("!" + $2->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": unary_expression : NOT unary_expression"<<endl<<endl;	
-			cout<<"!"<<$2->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unary_expression : NOT unary_expression"<<endl<<endl;	
+			logFile<<"!"<<$2->getName()<<endl<<endl;
 			
 			if($2->getTypeSpecifier() == "void")						
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1486,8 +1588,8 @@ unary_expression : ADDOP unary_expression  	{
 		}
 				
 		 | factor 	{									
-			cout<<"Line "<<line_count<<": unary_expression : factor"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": unary_expression : factor"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 
 			//**asm**//
 			$$->setAddress($1->getAddress());
@@ -1495,8 +1597,8 @@ unary_expression : ADDOP unary_expression  	{
 		 ;
 	
 factor	: variable 	{										
-				cout<<"Line "<<line_count<<": factor : variable"<<endl<<endl;	
-				cout<<$1->getName()<<endl<<endl;
+				logFile<<"Line "<<line_count<<": factor : variable"<<endl<<endl;	
+				logFile<<$1->getName()<<endl<<endl;
 				
 				$$->setTypeSpecifier($1->getTypeSpecifier());
 
@@ -1508,13 +1610,13 @@ factor	: variable 	{
 													
 			
 			$$ = new SymbolInfo(($1->getName() + "(" + $3->getName() + ")"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : ID LPAREN argument_list RPAREN"<<endl<<endl;	
+			logFile<<"Line "<<line_count<<": factor : ID LPAREN argument_list RPAREN"<<endl<<endl;	
 			
 			SymbolInfo* temp = st.Lookup($1->getName());					// searching for the function being called in all ScopeTables
 			
 			if(temp == NULL)								// no function declared before
 			{
-				cout<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Undeclared function "<<$1->getName()<<endl<<endl;
 				error_count++;
 				
@@ -1522,7 +1624,7 @@ factor	: variable 	{
 			}
 			else if(temp->getSize() != -2)							// function not defined
 			{
-				cout<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Undefined function "<<$1->getName()<<endl<<endl;
 				error_count++;
 					
@@ -1533,7 +1635,7 @@ factor	: variable 	{
 			{
 				if(temp->getParamListSize() != arg_list.size())				// if arg_list and function param_list no. don't match
 				{
-					cout<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
+					logFile<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
 					errorFile<<"Error at line "<<line_count<<": Total number of arguments mismatch in function "<<$1->getName()<<endl<<endl;
 					error_count++;
 					
@@ -1546,7 +1648,7 @@ factor	: variable 	{
 					{
 						if(arg_list[i] != temp->getParameter(i).param_type)
 						{
-							cout<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
+							logFile<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
 							errorFile<<"Error at line "<<line_count<<": "<<i+1<<"th argument mismatch in function "<<$1->getName()<<endl<<endl;
 							error_count++;
 							break;
@@ -1601,7 +1703,7 @@ factor	: variable 	{
 				}
 			}	
 				
-			cout<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
+			logFile<<$1->getName()<<"("<<$3->getName()<<")"<<endl<<endl;
 			arg_list.clear();
 			
 			tempArgAddress.clear();
@@ -1611,8 +1713,8 @@ factor	: variable 	{
 	| LPAREN expression RPAREN	{								
 			
 			$$ = new SymbolInfo(("(" + $2->getName() + ")"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : LPAREN expression RPAREN"<<endl<<endl;	
-			cout<<"("<<$2->getName()<<")"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": factor : LPAREN expression RPAREN"<<endl<<endl;	
+			logFile<<"("<<$2->getName()<<")"<<endl<<endl;
 			
 			$$->setTypeSpecifier($2->getTypeSpecifier());
 
@@ -1624,8 +1726,8 @@ factor	: variable 	{
 	| CONST_INT 		{
 			
 			$$ = new SymbolInfo($1->getName(), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : CONST_INT"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": factor : CONST_INT"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 			$$->setTypeSpecifier("int");
 			$$->setSize(-1);
@@ -1637,8 +1739,8 @@ factor	: variable 	{
 	| CONST_FLOAT		{
 			
 			$$ = new SymbolInfo($1->getName(), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : CONST_FLOAT"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": factor : CONST_FLOAT"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 			$$->setTypeSpecifier("float");
 			}
@@ -1646,8 +1748,8 @@ factor	: variable 	{
 	| variable INCOP 	{
 			
 			$$ = new SymbolInfo(($1->getName() + "++"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : variable INCOP"<<endl<<endl;	
-			cout<<$1->getName()<<"++"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": factor : variable INCOP"<<endl<<endl;	
+			logFile<<$1->getName()<<"++"<<endl<<endl;
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 
@@ -1676,8 +1778,8 @@ factor	: variable 	{
 	| variable DECOP	{
 			
 			$$ = new SymbolInfo(($1->getName() + "--"), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": factor : variable DECOP"<<endl<<endl;	
-			cout<<$1->getName()<<"--"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": factor : variable DECOP"<<endl<<endl;	
+			logFile<<$1->getName()<<"--"<<endl<<endl;
 			
 			$$->setTypeSpecifier($1->getTypeSpecifier());
 
@@ -1706,24 +1808,24 @@ factor	: variable 	{
 	
 argument_list : arguments	{
 			
-			cout<<"Line "<<line_count<<": argument_list : arguments"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": argument_list : arguments"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			}	
 	|	/* empty string */	{
 			
-			cout<<"Line "<<line_count<<": argument_list : <empty>"<<endl<<endl;
+			logFile<<"Line "<<line_count<<": argument_list : <empty>"<<endl<<endl;
 			}
 			  ;
 	
 arguments : arguments COMMA logic_expression	{
 			
 			$$ = new SymbolInfo(($1->getName() + ", " + $3->getName()), "NON_TERMINAL");
-			cout<<"Line "<<line_count<<": arguments : arguments COMMA logic_expression"<<endl<<endl;	
-			cout<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": arguments : arguments COMMA logic_expression"<<endl<<endl;	
+			logFile<<$1->getName()<<", "<<$3->getName()<<endl<<endl;
 			
 			if($3->getTypeSpecifier() == "void")						
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1740,12 +1842,12 @@ arguments : arguments COMMA logic_expression	{
 			
 	      | logic_expression	{
 			
-			cout<<"Line "<<line_count<<": arguments : logic_expression"<<endl<<endl;	
-			cout<<$1->getName()<<endl<<endl;
+			logFile<<"Line "<<line_count<<": arguments : logic_expression"<<endl<<endl;	
+			logFile<<$1->getName()<<endl<<endl;
 			
 			if($1->getTypeSpecifier() == "void")						
 			{
-				cout<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
+				logFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
@@ -1781,7 +1883,7 @@ int main(int argc,char *argv[])
 	code.open("code.asm");													// opening assembly code file
 	optimized_code.open("optimized_code.asm");								// opening optimized_code file
 
-	cout.rdbuf(logFile.rdbuf());											// redirect cout to logFile
+	// cout.rdbuf(logFile.rdbuf());											// redirect logFile to logFile
 //	tokenout.open("1705108_token.txt");
 
 	yyin= fin;
@@ -1789,8 +1891,8 @@ int main(int argc,char *argv[])
 	
 	st.printAllScopeTable(logFile);
 	
-	cout<<"Total Lines: "<<line_count<<endl;
-	cout<<"Total Errors: "<<error_count<<endl;
+	logFile<<"Total Lines: "<<line_count<<endl;
+	logFile<<"Total Errors: "<<error_count<<endl;
 	
 	fclose(yyin);
 	logFile.close();
