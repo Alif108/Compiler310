@@ -3,7 +3,7 @@
 These repository contains the assigments I have done on the Compiler course of BUET CSE Level 3-Term 1. The course attempts to build a (partial) compiler for the C language.
 
 ## SymbolTable
-SymbolTable contains the token informations. SymbolTable is basically a hashatable of hastables.
+SymbolTable contains the token informations. SymbolTable is basically a hashtable of hashtables.
 
 ## Lexical Analyzer
 A scanner is built for recognizing tokens. This analyzer uses a tool named "Flex". The previously built SymbolTable is used here. Compiling the lex file with the target txt file will generate a "token.txt" file and a "log.txt" file. Script to compile the lex file is attached. 
