@@ -123,29 +123,27 @@ void yyerror(char *s)
 
 string optimize_code(string code)
 {
-	string temp1, temp2, temp3;
+	string temp1, temp2;
     stringstream ss(code);
-    string temp_line = "";
     string opt_code = "";
     string temp_opt_code = "";
     string temp_token;
-    vector<string>lines;
+
+    vector<string>lines;										// container for all the individual lines
     vector<string>temp_lines;
-    vector<string> tokens1, tokens2;
+    vector<string> tokens1, tokens2;							// container for words of two consecutive lines
 
     while(getline(ss, temp1, '\n'))								// taking each line 
     {
     	stringstream temp_stream1(temp1);
         getline(temp_stream1, temp2, ';');						// trimming all the comments
 
-        // temp_opt_code += temp2 ;									// temp2 contains a single line of asm code
-
-        temp_lines.push_back(temp2);									// lines contains all the lines of asm code
+        temp_lines.push_back(temp2);							// lines contains all the lines of asm code
     }
 
     for(int i=0; i<temp_lines.size(); i++)
     {
-    	if(temp_lines[i] != "")
+    	if(temp_lines[i] != "")									// eliminating any further newline
     		lines.push_back(temp_lines[i]);
     }
 
@@ -154,7 +152,7 @@ string optimize_code(string code)
     for(int i=0; i<lines.size()-1; i++)
     {
     	stringstream line1_stream(lines[i]);					// taking a line
-    	stringstream line2_stream(lines[i+1]);				// taking the next line
+    	stringstream line2_stream(lines[i+1]);					// taking the next line
 
     	while(getline(line1_stream, temp_token, ' '))			
     		tokens1.push_back(temp_token);						// pushing each word of line 1
@@ -162,35 +160,14 @@ string optimize_code(string code)
     	while(getline(line2_stream, temp_token, ' '))			
     		tokens2.push_back(temp_token);						// pushing each word of line 2
 
-    	// cout<<"line_i: "<<lines[i]<<endl;
-    	// cout<<"line_i+1: "<<lines[i+1]<<endl<<endl;
-
-    	// cout<<"line_i: "<<(tokens1[0]=="mov")<<endl;
-    	// cout<<"line_i+1: "<<tokens2[0]<<endl<<endl;
-
-    	// if(lines[i] == "")
-    	// 	cout<<"here\n";
-
     	if((tokens1[0].substr(1,3) == "mov") && (tokens2[0].substr(1,3) == "mov"))
     	{
-    		// cout<<"here"<<endl;
-    		// e.g. mov t1, ax ; mov ax, t1
+    		// e.g. mov t1, ax 
+    		//		mov ax, t1
     		// t1 <-> t1 && ax  <-> ax
-    		// cout<<(tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2])<<endl;
-
-    		cout<<(tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2].substr(0,2))<<endl;
-    		cout<<(tokens2[1].substr(0, tokens2[1].length()-1)==tokens1[2].substr(0,2))<<endl;
-    		// cout<<<<endl<<endl;
-
-    		// cout<<tokens1[1].substr(0, tokens1[1].length()-1)<<endl;
-    		// cout<<tokens2[2].substr(0,2)<<endl;
-    		// cout<<tokens2[1].substr(0, tokens2[1].length()-1)<<endl;
-    		// cout<<tokens1[2].substr(0,2)<<endl<<endl;
-
 
     		if((tokens1[1].substr(0, tokens1[1].length()-1)==tokens2[2].substr(0,2)) && (tokens2[1].substr(0, tokens2[1].length()-1)==tokens1[2].substr(0,2)))
     		{
-    			cout<<"here"<<endl;
     			opt_code += lines[i] + "\n";
     			i++;											// skipping the next line
     		}
@@ -206,17 +183,8 @@ string optimize_code(string code)
     	tokens1.clear();
     	tokens2.clear();
     }
-	opt_code += lines[lines.size()-1];
+	opt_code += lines[lines.size()-1];						// concatenating the last line END MAIN
 
-    // 	for(int i=0; i<token1.size(); i++)
-    // 		cout<<token1[i]<<" ";
-
-    // 	cout<<opt_code;
-
-    // 	tokens1.clear();
-    // 	tokens2.clear();
-    // 	// cout<<endl;
-   	// }
 	return opt_code;
 }
 
@@ -276,43 +244,8 @@ start : program
 			assembly_code += "\n";
 
 			assembly_code += ".CODE\n";
-			// assembly_code += "PRINTLN PROC\n\n";								// print procedure
-			// assembly_code += "push ax\n";
-			// assembly_code += "push bx\n";
-			// assembly_code += "push cx\n";
-			// assembly_code += "push dx\n";
 
-			// assembly_code += "mov cx, 0\n";
-			// assembly_code += "mov dx, 0\n";
-
-			// assembly_code += (label1 + ":\n\n");
-			// assembly_code += "cmp ax, 0\n";
-			// assembly_code += ("je " + label2 + "\n\n");
-			// assembly_code += "mov bx, 10\n";
-			// assembly_code += "div bx\n\n";
-			// assembly_code += "push dx\n";
-			// assembly_code += "inc cx\n\n";
-			// assembly_code += "xor dx, dx\n";
-			// assembly_code += ("jmp " + label1 + "\n\n");
-			// assembly_code += (label2 + ":\n\n");
-			// assembly_code += "cmp cx, 0\n";
-			// assembly_code += "je " + exitLabel + "\n\n";
-			// assembly_code += "pop dx\n";
-			// assembly_code += "add dx, 48\n\n";
-			// assembly_code += "mov ah, 2\n";
-			// assembly_code += "int 21h\n\n";
-			// assembly_code += "dec cx\n";
-			// assembly_code += ("jmp " + label2 + "\n\n");
-			// assembly_code += (exitLabel + ":\n");
-
-			// assembly_code += "pop dx\n";
-			// assembly_code += "pop cx\n";
-			// assembly_code += "pop bx\n";
-			// assembly_code += "pop ax\n";
-			// assembly_code += "ret\n";
-			// assembly_code += "PRINTLN ENDP\n\n";
-
-			assembly_code += "PRINTLN PROC\n\n";
+			assembly_code += "PRINTLN PROC\n";									// print procedure
 			assembly_code += "\tpush ax\n";
 			assembly_code += "\tpush bx\n";
 			assembly_code += "\tpush cx\n";
@@ -345,9 +278,10 @@ start : program
 			assembly_code += "\tpop bx\n";
 			assembly_code += "\tpop ax\n";
 			assembly_code += "\tret\n";
-			assembly_code += "PRINTLN ENDP\n\n";
+			assembly_code += "PRINTLN ENDP\n";
 
 			assembly_code += $1->getCode();										// code segment
+
 			assembly_code += "END MAIN\n";										// end segment
 
 			code<<assembly_code;												//writing to assembly code file
@@ -395,8 +329,6 @@ func_declaration : type_specifier id update_func_info LPAREN parameter_list RPAR
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "(" + $5->getName() + ");"), "NON_TERMINAL");
 			logFile<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON"<<endl<<endl;
 			logFile<<$1->getName()<<" "<<$2->getName()<<"("<<$5->getName()<<");"<<endl<<endl;
-			
-//			func_info.push_back(make_pair($1->getName(), $2->getName()));
 		}
 		
 		| type_specifier id update_func_info LPAREN RPAREN insert_func_dec_info SEMICOLON	{
@@ -404,8 +336,6 @@ func_declaration : type_specifier id update_func_info LPAREN parameter_list RPAR
 			$$ = new SymbolInfo(($1->getName() + " " + $2->getName() + "();"), "NON_TERMINAL");
 			logFile<<"Line "<<line_count<<": func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON"<<endl<<endl;
 			logFile<<$1->getName()<<" "<<$2->getName()<<"();"<<endl<<endl;
-			
-//			func_info.push_back(make_pair($1->getName(), $2->getName()));
 		}
 		;
 
@@ -422,10 +352,10 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 			$$->appendCode("\tpush bx\n");
 			$$->appendCode("\tpush cx\n");
 			$$->appendCode("\tpush dx\n");
-			$$->appendCode("\tpush di\n\n");
+			$$->appendCode("\tpush di\n");
 			$$->appendCode($8->getCode());
 			$$->appendCode($2->getName() + "_proc ENDP\t");
-			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 		}
 		
 		| type_specifier id update_func_info LPAREN RPAREN insert_func_def_info compound_statement		{
@@ -438,9 +368,9 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 			if($2->getName() == "main")									// if main function
 			{
 				$$->appendCode("\tMAIN PROC\n");
-				$$->appendCode("\t; DATA SEGMENT INITIALIZATION\n\n");
+				$$->appendCode("\t; DATA SEGMENT INITIALIZATION\n");
 				$$->appendCode("\tmov ax, @DATA\n");
-				$$->appendCode("\tmov ds, ax\n\n");						// data segment init part
+				$$->appendCode("\tmov ds, ax\n");						// data segment init part
 
 				$$->appendCode($7->getCode() + "\n");					// main code part
 
@@ -457,10 +387,10 @@ func_definition : type_specifier id update_func_info LPAREN parameter_list RPARE
 				$$->appendCode("\tpush bx\n");
 				$$->appendCode("\tpush cx\n");
 				$$->appendCode("\tpush dx\n");
-				$$->appendCode("\tpush di\n\n");
+				$$->appendCode("\tpush di\n");
 				$$->appendCode($7->getCode());
 				$$->appendCode($2->getName() + "_proc ENDP\t");
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 		}
  		;
@@ -483,13 +413,10 @@ insert_func_def_info 	: 	{
 						{
 							si->addParameter(param_list[i].param_type, param_list[i].param_name);
 						}
-
-						// logFile<<argumentAddressList.size()<<endl;
 						for(int i=0; i<argumentAddressList.size(); i++)
 						{
 							si->pushFuncArgsAddress(argumentAddressList[i]);
 						}						
-						// logFile<<si->getName()<<" "<<si->getFuncArgsAddressSize()<<endl;
 						st.Insert(*si);
 
 						//NOTICE//
@@ -719,7 +646,6 @@ var_declaration : type_specifier declaration_list SEMICOLON	{
 				}
 				logFile<<$1->getName()<<" "<<$2->getName()<<";"<<endl<<endl;
 				
-//				st.printAllScopeTable(logFile);
 				variable_list.clear();							// emptying the variable_list container after inserting
 			}
  		 ;
@@ -883,15 +809,15 @@ statement : var_declaration	{
                 $$->appendCode($4->getCode());									// code for "i < 10"
                 $$->appendCode("\t\n");
                 $$->appendCode("\tmov ax," + $4->getAddress() + "\n");			// mov ax, t3 (address of i < 10)
-                $$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
-                $$->appendCode("\tje " + label2 + "\n");							// je L2
+                $$->appendCode("\tcmp ax, 0\n");								// cmp ax, 0
+                $$->appendCode("\tje " + label2 + "\n");						// je L2
                 $$->appendCode("\t\n");
                 $$->appendCode($7->getCode());									// code for block inside for loop
                 $$->appendCode("\t\n");
                 $$->appendCode($5->getCode());									// i++
-                $$->appendCode("\tjmp " + label1 + "\n");							// jmp L1
+                $$->appendCode("\tjmp " + label1 + "\n");						// jmp L1
                 $$->appendCode(label2 + ":\t");									// L2:
-                $$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+                $$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 		}
 		
@@ -906,11 +832,11 @@ statement : var_declaration	{
 
 			$$->appendCode($3->getCode());										// code of condition
 			$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");				// mov ax, t0  (computed value of condition)	
-			$$->appendCode("\tcmp ax, 0\n");										// cmp ax, 0
+			$$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
 			$$->appendCode("\tje " + label + "\n");								// je L
 			$$->appendCode($5->getCode());										// code of statement
 			$$->appendCode(label + ":\t");										// L:
-			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 		}
 		
 	  | IF LPAREN expression RPAREN statement ELSE statement	{
@@ -925,14 +851,14 @@ statement : var_declaration	{
 
 			$$->appendCode($3->getCode());
 			$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");				// mov ax, t0
-			$$->appendCode("\tcmp ax, 0\n");										// cmp ax, 0
-			$$->appendCode("\tje " + label1 + "\n");								// je L1:
+			$$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
+			$$->appendCode("\tje " + label1 + "\n");							// je L1:
 			$$->appendCode($5->getCode());										// code
-			$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2:
+			$$->appendCode("\tjmp " + label2 + "\n");							// jmp L2:
 			$$->appendCode(label1 + ":\n");										// L1:
 			$$->appendCode($7->getCode());										// code
 			$$->appendCode(label2 + ":\t");										// L2:
-			$$->appendCode("\t; line no." + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no." + to_string(line_count) + "\n");
 		}
 		
 	  | WHILE LPAREN expression RPAREN statement	{
@@ -948,13 +874,13 @@ statement : var_declaration	{
         	$$->appendCode(label1 + ":\n");									// L1:
         	$$->appendCode($3->getCode());									// code for "i < 10"
         	$$->appendCode("\tmov ax," + $3->getAddress() + "\n");			// mov ax, t3 (address of i < 10)
-        	$$->appendCode("\tcmp ax, 0\n");									// cmp ax, 0
-        	$$->appendCode("\tje " + label2 + "\n");							// je L2
+        	$$->appendCode("\tcmp ax, 0\n");								// cmp ax, 0
+        	$$->appendCode("\tje " + label2 + "\n");						// je L2
         	$$->appendCode("\t\n");
         	$$->appendCode($5->getCode());									// code for block inside while loop
-         	$$->appendCode("\tjmp " + label1 + "\n");							// jmp L1
+         	$$->appendCode("\tjmp " + label1 + "\n");						// jmp L1
           	$$->appendCode(label2 + ":\t");									// L2:
-          	$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+          	$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 		}
 		
 	  | PRINTLN LPAREN id RPAREN SEMICOLON		{
@@ -974,11 +900,11 @@ statement : var_declaration	{
 			{
 				//**asm**//
 				$$->appendCode("\tpush ax\n");									// push ax
-				$$->appendCode("\tmov ax, " + temp->getAddress() + "\n");			// mov ax, a1
+				$$->appendCode("\tmov ax, " + temp->getAddress() + "\n");		// mov ax, a1
 				$$->appendCode("\tcall PRINTLN\n");								// call PRINTLN
-				$$->appendCode("\tpop ax\t");										// pop ax
+				$$->appendCode("\tpop ax\t");									// pop ax
 				$$->appendCode("\t; line no. " + to_string(line_count));
-				$$->appendCode("\t\n\n");
+				$$->appendCode("\t\n");
 			}
 
 			logFile<<"printf("<<$3->getName()<<");"<<"\n"<<endl<<endl;
@@ -1003,7 +929,7 @@ statement : var_declaration	{
 				$$->appendCode("\tpop bx\n");
 				$$->appendCode("\tpop ax\n");
 				$$->appendCode("\tret\t");
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else
 				$$->appendCode($2->getCode());
@@ -1111,9 +1037,9 @@ variable : id 	{
 					//**asm**//
 					$$->appendCode($3->getCode());
 					$$->appendCode("\tmov di, " + $3->getAddress() + "\n");					// mov di, 2 
-					$$->appendCode("\tadd di, di\t");											// add di, di
+					$$->appendCode("\tadd di, di\t");										// add di, di
 					$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
-					$$->setAddress(temp->getAddress());						// setting up the assembly code symbol	
+					$$->setAddress(temp->getAddress());										// setting up the assembly code symbol	
 				}
 			
 			}
@@ -1171,10 +1097,10 @@ expression : logic_expression		{
 				{
 					$$->appendCode($1->getCode());
 					$$->appendCode($3->getCode());
-					$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");			// e.g. mov ax, 2
+					$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");				// e.g. mov ax, 2
 					$$->appendCode("\tmov " + $1->getAddress() + ", ax \t"); 			// e.g. mov a_1, ax
 					$$->appendCode("\t; line no. " + to_string(line_count));
-					$$->appendCode("\t\n\n");
+					$$->appendCode("\t\n");
 					
 					$$->setAddress($1->getAddress());
 				}
@@ -1185,7 +1111,7 @@ expression : logic_expression		{
 					$$->appendCode("\tmov ax, " + $3->getAddress() + "\n");			// mov ax, 2
 					$$->appendCode("\tmov " + $1->getAddress() + "[di], ax\t");		// mov c1[di], ax
 					$$->appendCode("\t; line no. " + to_string(line_count));
-					$$->appendCode("\t\n\n");
+					$$->appendCode("\t\n");
 					
 					$$->setAddress($1->getAddress());
 				}
@@ -1196,7 +1122,7 @@ expression : logic_expression		{
 					$$->appendCode("\tmov ax, " + $3->getAddress() + "[di]\n");		// mov ax, c1[di]
 					$$->appendCode("\tmov " + $1->getAddress() + ", ax\t");			// mov a1, ax
 					$$->appendCode("\t; line no. " + to_string(line_count));
-					$$->appendCode("\t\n\n");
+					$$->appendCode("\t\n");
 					
 					$$->setAddress($1->getAddress());
 				}
@@ -1211,7 +1137,7 @@ expression : logic_expression		{
 					$$->appendCode($1->getCode());									// mov di, 1; add di, di
 					$$->appendCode("\tmov ax, " + temp + "\n");						// mov ax, t6
 					$$->appendCode("\tmov " + $1->getAddress() + ", ax\t");			// mov a1[di], ax
-					$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+					$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 
 					$$->setAddress($1->getAddress());
 				}
@@ -1253,30 +1179,30 @@ logic_expression : rel_expression 	{
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
 				$$->appendCode("\tcmp " + $1->getAddress() + ", 0\n");				// cmp a1, 0
-				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tje " + label1 + "\n");							// je L1
 				$$->appendCode("\tcmp " + $3->getAddress() + ", 0\n");				// cmp b1, 0
-				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tje " + label1 + "\n");							// je L1
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t1, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L2
 				$$->appendCode(label1 + ":\n");										// L1 :
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t1, 0
 				$$->appendCode(label2 + ":\t");										// L2 :
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else if($2->getName() == "||")
 			{
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
 				$$->appendCode("\tcmp " + $1->getAddress() + ", 1\n");				// cmp a1, 1
-				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tje " + label1 + "\n");							// je L1
 				$$->appendCode("\tcmp " + $3->getAddress() + ", 1\n");				// cmp b1, 1
-				$$->appendCode("\tje " + label1 + "\n");								// je L1
+				$$->appendCode("\tje " + label1 + "\n");							// je L1
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t1, 0
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L2
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L2
 				$$->appendCode(label1 + ":\n");										// L1 :
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t1, 1
 				$$->appendCode(label2 + ":\t");										// L2 :
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 		}	
 		 ;
@@ -1312,73 +1238,73 @@ rel_expression	: simple_expression 	{
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tjge " + label1 + "\n");								// jge L0
+				$$->appendCode("\tjge " + label1 + "\n");							// jge L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else if($2->getName() == ">")
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tjle " + label1 + "\n");								// jle L0
+				$$->appendCode("\tjle " + label1 + "\n");							// jle L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else if($2->getName() == "<=")
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tjg " + label1 + "\n");								// jg L0
+				$$->appendCode("\tjg " + label1 + "\n");							// jg L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else if($2->getName() == ">=")
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tjl " + label1 + "\n");								// jl L0
+				$$->appendCode("\tjl " + label1 + "\n");							// jl L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else if($2->getName() == "==")
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tjne " + label1 + "\n");								// jne L0
+				$$->appendCode("\tjne " + label1 + "\n");							// jne L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			else  		// RELOP -> !=
 			{
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 2
 				$$->appendCode("\tcmp ax, " + $3->getAddress() + "\n");				// cmp ax, 5
-				$$->appendCode("\tje " + label1 + "\n");								// je L0
+				$$->appendCode("\tje " + label1 + "\n");							// je L0
 				$$->appendCode("\tmov " + temp + ", 1\n");							// mov t3, 1
-				$$->appendCode("\tjmp " + label2 + "\n");								// jmp L1
+				$$->appendCode("\tjmp " + label2 + "\n");							// jmp L1
 				$$->appendCode(label1 + ": \n");									// L0:
 				$$->appendCode("\tmov " + temp + ", 0\n");							// mov t3, 0
 				$$->appendCode(label2 + ": \t");									// L1:
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			$$->setAddress(temp);
 		}			
@@ -1425,8 +1351,8 @@ simple_expression : term 	{
 			else
 				$$->appendCode("\tsub ax, " + $3->getAddress() + "\n");			// e.g. sub ax, b1
 
-			$$->appendCode("\tmov " + temp + ", ax\n");							// e.b. mov t0, ax
-			$$->appendCode("\t; line no. " + to_string(line_count) +"\n\n");		
+			$$->appendCode("\tmov " + temp + ", ax\t");							// e.b. mov t0, ax
+			$$->appendCode("\t; line no. " + to_string(line_count) +"\n");		
 		}
 		;
 					
@@ -1481,10 +1407,10 @@ term :	unary_expression	{
 					$$->appendCode($3->getCode());
 					$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");		// mov ax, a1
 					$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");		// mov bx, b1
-					$$->appendCode("\txor dx, dx\n");								// xor dx, dx
-					$$->appendCode("\tdiv bx\n");									// div bx
+					$$->appendCode("\txor dx, dx\n");							// xor dx, dx
+					$$->appendCode("\tdiv bx\n");								// div bx
 					$$->appendCode("\tmov " + temp + ", dx\t");					// mov t0, dx		// REMAINDER is in dx
-					$$->appendCode("\t\n\n");
+					$$->appendCode("\t\n");
 
 					// $$->setSize(-1);									// TODO: verify 	
 				}
@@ -1516,13 +1442,13 @@ term :	unary_expression	{
 
 				$$->appendCode($1->getCode());
 				$$->appendCode($3->getCode());
-				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");		// mov ax, a1
-				$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");		// mov bx, b1
+				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");			// mov ax, a1
+				$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");			// mov bx, b1
 				$$->appendCode("\txor dx, dx\n");								// xor dx, dx
 				$$->appendCode("\tdiv bx\n");									// div bx
-				$$->appendCode("\tmov " + temp + ", ax\t");					// mov t0, ax		// QUOTIENT is in ax
+				$$->appendCode("\tmov " + temp + ", ax\t");						// mov t0, ax		// QUOTIENT is in ax
 				$$->appendCode("\t; line no. " + to_string(line_count));
-				$$->appendCode("\t\n\n");
+				$$->appendCode("\t\n");
 			}
 			
 			else																			// multiplication operator
@@ -1542,9 +1468,9 @@ term :	unary_expression	{
 				$$->appendCode($3->getCode());
 				$$->appendCode("\tmov ax, " + $1->getAddress() + "\n");				// mov ax, 1
 				$$->appendCode("\tmov bx, " + $3->getAddress() + "\n");				// mov bx, 2
-				$$->appendCode("\tmul bx\n");											// mul bx
+				$$->appendCode("\tmul bx\n");										// mul bx
 				$$->appendCode("\tmov " + temp + ", ax\t");							// mov t1, ax
-				$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+				$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			}
 			
 			logFile<<$1->getName()<<$2->getName()<<$3->getName()<<endl<<endl;
@@ -1677,22 +1603,22 @@ factor	: variable 	{
 						for(int i=0; i<tempArgAddress.size(); i++)
 						{
 							$$->appendCode("\tmov ax, " + tempArgAddress[i] + "\n");				// mov ax, a3		// a3 from main
-							$$->appendCode("\tmov " + temp->getFuncArgsAddress(i) + ", ax\n");	// mov a1, ax		// a1 from callee function
+							$$->appendCode("\tmov " + temp->getFuncArgsAddress(i) + ", ax\n");		// mov a1, ax		// a1 from callee function
 						}
-						$$->appendCode("\tcall " + $1->getName() + "_proc\n");					// call f_proc
-						$$->appendCode("\tmov ax, ret_temp\n");									// mov ax, ret_temp
-						$$->appendCode("\tmov " + tempVar + ", ax\n");							// mov t2, ax
+						$$->appendCode("\tcall " + $1->getName() + "_proc\n");						// call f_proc
+						$$->appendCode("\tmov ax, ret_temp\n");										// mov ax, ret_temp
+						$$->appendCode("\tmov " + tempVar + ", ax\n");								// mov t2, ax
 
 						for(int i=asmVariables.size()-1; i>-1; i--)
 						{
-							$$->appendCode("\tpop " + asmVariables[i] + "\n");					// popping the asm variables
+							$$->appendCode("\tpop " + asmVariables[i] + "\n");						// popping the asm variables
 						}
 						for(int i=tempCount-2; i>-1; i--)
 						{
 							$$->appendCode("\tpop t" + to_string(i) + "\n");						// pop all the temp registers
 						}
 
-						$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+						$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 
 						$$->setAddress(tempVar);
 					}
@@ -1771,7 +1697,7 @@ factor	: variable 	{
 				$$->appendCode("\tmov " + temp + ", ax\n");						// mov t5, ax
 				$$->appendCode("\tinc " + $1->getAddress() + "[di]\t");			// inc c1[di]
 			}
-			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			$$->setAddress(temp);
 		}
 			
@@ -1801,7 +1727,7 @@ factor	: variable 	{
 				$$->appendCode("\tmov " + temp + ", ax\n");						// mov t5, ax
 				$$->appendCode("\tdec " + $1->getAddress() + "[di]\t");			// inc c1[di]
 			}
-			$$->appendCode("\t; line no. " + to_string(line_count) + "\n\n");
+			$$->appendCode("\t; line no. " + to_string(line_count) + "\n");
 			$$->setAddress(temp);
 			}
 	;
@@ -1829,8 +1755,7 @@ arguments : arguments COMMA logic_expression	{
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
-//				$$->setTypeSpecifier("int");						// default type	-> int	
-				arg_list.push_back("int");						// default type -> int				
+				arg_list.push_back("int");							// default type -> int				
 			}
 			else
 				arg_list.push_back($3->getTypeSpecifier());
@@ -1851,8 +1776,7 @@ arguments : arguments COMMA logic_expression	{
 				errorFile<<"Error at line "<<line_count<<": Void function used in expression"<<endl<<endl;
 				error_count++;
 				
-//				$$->setTypeSpecifier("int");						// default type	-> int
-				arg_list.push_back("int");						// default type -> int				
+				arg_list.push_back("int");							// default type -> int				
 			}
 			else
 				arg_list.push_back($1->getTypeSpecifier());
